@@ -52,7 +52,7 @@ class State:
         if res:
             if (ts - res['awake']) > self.config.get_awake_cooldown() and (ts - res['last_active']) > self.config.get_sleep_min():
                 obj['awake'] = ts
-                awoken = True
+                awoken = res['enabled']
             self.users.update(obj, user.id == user_id)
         else:
             obj['id'] = user_id

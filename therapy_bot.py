@@ -15,7 +15,7 @@ class TherapyBot(discord.Client):
         self.loop.create_task(self.background_task())
 
     async def background_task(self):
-        while not self.is_closed:
+        while True:
             for user in self.state.get_enabled_users():
                 ts = time.time()
                 if user['awake'] > user['working'] and (ts - user['awake']) > self.config.get_work_delay():
@@ -28,32 +28,31 @@ class TherapyBot(discord.Client):
         if self.user.id == msg.author.id:
             return
         if self.state.update_last_active(msg.author.id):
-            await self.user_awake(msg.author)
-        ch = self.get_channel(self.config.get_main_channel())
+            await self.user_awake(msg.author, msg.channel)
         if msg.content.startswith("!work"):
             cmd = msg.content[5:].strip()
             if cmd == "start":
-                await self.user_start_working(msg.author, 'working_cmd')
+                await self.user_start_working(msg.author, 'working_cmd', msg.channel)
             elif cmd == "done":
-                await self.user_stop_working(msg.author, 'done_cmd')
+                await self.user_stop_working(msg.author, 'done_cmd', msg.channel)
             elif cmd == "enable":
                 self.state.set_enabled(msg.author.id, True)
-                await ch.send(self.config.get_message('enable').format(msg.author.mention))
+                await msg.channel.send(self.config.get_message('enable').format(msg.author.mention))
             elif cmd == "disable":
                 self.state.set_enabled(msg.author.id, False)
-                await ch.send(self.config.get_message('disable').format(msg.author.mention))
+                await msg.channel.send(self.config.get_message('disable').format(msg.author.mention))
 
-    async def user_awake(self, user):
-        ch = self.get_channel(self.config.get_main_channel())
+    async def user_awake(self, user, channel=None):
+        ch = channel or self.get_channel(self.config.get_main_channel())
         msg = self.config.get_message('awake')
         await ch.send(msg.format(user.mention))
 
-    async def user_start_working(self, user, message='working_timer'):
-        ch = self.get_channel(self.config.get_main_channel())
+    async def user_start_working(self, user, message='working_timer', channel=None):
+        ch = channel or self.get_channel(self.config.get_main_channel())
         await ch.send(self.config.get_message(message).format(user.mention))
         self.state.set_working(user.id, time.time())
 
-    async def user_stop_working(self, user, message='done_timer'):
-        ch = self.get_channel(self.config.get_main_channel())
+    async def user_stop_working(self, user, message='done_timer', channel=None):
+        ch = channel or self.get_channel(self.config.get_main_channel())
         await ch.send(self.config.get_message(message).format(user.mention))
         self.state.set_working(user.id, 0)

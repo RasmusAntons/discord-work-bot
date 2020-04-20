@@ -16,7 +16,7 @@ class Config:
         return self.conf['voice_channel']
 
     def get_background_delay(self):
-        return self.conf['backround_delay_s']
+        return self.conf['background_delay_s']
 
     def get_awake_cooldown(self):
         return self.conf['awake_cooldown_h'] * 3600
