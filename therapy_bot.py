@@ -43,12 +43,6 @@ class TherapyBot(discord.Client):
                 self.state.set_enabled(msg.author.id, False)
                 await ch.send(self.config.get_message('disable').format(msg.author.mention))
 
-    async def on_voice_state_update(self, member, before, after):
-        if self.user.id == member.id:
-            return
-        if self.state.update_last_active(member.id):
-            await self.user_awake(member)
-
     async def user_awake(self, user):
         ch = self.get_channel(self.config.get_main_channel())
         msg = self.config.get_message('awake')
