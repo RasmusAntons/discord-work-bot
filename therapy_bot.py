@@ -38,12 +38,10 @@ class TherapyBot(discord.Client):
                 await self.user_stop_working(msg.author, 'done_cmd')
             elif cmd == "enable":
                 self.state.set_enabled(msg.author.id, True)
-                msg = self.config.get_message('enable')
-                await ch.send(msg.format(msg.author.mention))
+                await ch.send(self.config.get_message('enable').format(msg.author.mention))
             elif cmd == "disable":
                 self.state.set_enabled(msg.author.id, False)
-                msg = self.config.get_message('disable')
-                await ch.send(msg.format(msg.author.mention))
+                await ch.send(self.config.get_message('disable').format(msg.author.mention))
 
     async def on_voice_state_update(self, member, before, after):
         if self.user.id == member.id:
@@ -58,12 +56,10 @@ class TherapyBot(discord.Client):
 
     async def user_start_working(self, user, message='working_timer'):
         ch = self.get_channel(self.config.get_main_channel())
-        msg = self.config.get_message(message)
-        await ch.send(msg.format(user.mention))
+        await ch.send(self.config.get_message(message).format(user.mention))
         self.state.set_working(user.id, time.time())
 
     async def user_stop_working(self, user, message='done_timer'):
         ch = self.get_channel(self.config.get_main_channel())
-        msg = self.config.get_message(message)
-        await ch.send(msg.format(user.mention))
+        await ch.send(self.config.get_message(message).format(user.mention))
         self.state.set_working(user.id, 0)
