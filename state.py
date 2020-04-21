@@ -62,7 +62,7 @@ class State:
 
     def unset_user_conf(self, user_id, key):
         user = Query()
-        self.users.update(delete(key), user.id == user_id)
+        self.users.update(delete('conf_' + key), user.id == user_id)
 
     def get_enabled_users(self):
         user = Query()
