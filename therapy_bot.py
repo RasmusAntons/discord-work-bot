@@ -91,7 +91,7 @@ class TherapyBot(discord.Client):
         ch = channel or self.get_channel(self.config.get_main_channel())
         await ch.send(self.config.get_message(message).format(user.mention))
         self.state.set_working(user.id, time.time())
-        self.state.set_done(user, False)
+        self.state.set_done(user.id, False)
 
     async def user_stop_working(self, user, message='done_timer', channel=None):
         ch = channel or self.get_channel(self.config.get_main_channel())
