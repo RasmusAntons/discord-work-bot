@@ -27,7 +27,7 @@ class TherapyBot(discord.Client):
                     await self.user_start_working(self.get_user(user['id']))
                 elif not user['done'] and (ts - user['working']) > work_duration:
                     await self.user_stop_working(self.get_user(user['id']))
-                elif not user['done'] and (ts - user['reminded']) > reminder_interval:
+                elif not user['done'] and (ts - user['remind']) > reminder_interval:
                     await self.user_remind_working(self.get_user(user['id']))
             await asyncio.sleep(self.config.get_background_delay())
 
@@ -85,24 +85,45 @@ class TherapyBot(discord.Client):
                     res.append(f"\t\t{key}: {self.state.get_user_conf(msg.author.id, key)}")
                 await msg.channel.send('\n'.join(res))
 
+    async def on_reaction_add(self, reaction, user):
+        msg = reaction.message
+        prompt = self.state.get_prompt(user.id)
+        done = self.state.get_done(user.id)
+        self.state.set_prompt(user.id, 0)
+        if prompt == msg.id:
+            if reaction.emoji == '\N{WHITE HEAVY CHECK MARK}':
+                await msg.add_reaction('<:dreamwuwu:643219778806218773>')
+            elif reaction.emoji == '\N{CROSS MARK}':
+                await msg.add_reaction('<:angry_bird:664757860089200650>')
+                if done:
+                    await msg.channel.send(self.config.get_message('failure').format(user.mention))
+
     async def user_awake(self, user, channel=None):
         ch = channel or self.get_channel(self.config.get_main_channel())
         msg = self.config.get_message('awake')
-        work_delay = self.state.get_user_conf(user['id'], 'work_delay_h') * 3600
+        work_delay = self.state.get_user_conf(user.id, 'work_delay_h') * 3600
         await ch.send(msg.format(user.mention, work_delay))
 
     async def user_start_working(self, user, message='working_timer', channel=None):
         ch = channel or self.get_channel(self.config.get_main_channel())
+        ts = time.time()
         await ch.send(self.config.get_message(message).format(user.mention))
-        self.state.set_working(user.id, time.time())
+        self.state.set_working(user.id, ts)
+        self.state.set_remind(user.id, ts)
         self.state.set_done(user.id, False)
 
     async def user_stop_working(self, user, message='done_timer', channel=None):
         ch = channel or self.get_channel(self.config.get_main_channel())
-        await ch.send(self.config.get_message(message).format(user.mention))
+        msg = await ch.send(self.config.get_message(message).format(user.mention))
+        await msg.add_reaction('\N{WHITE HEAVY CHECK MARK}')
+        await msg.add_reaction('\N{CROSS MARK}')
+        self.state.set_prompt(user.id, msg.id)
         self.state.set_done(user.id, True)
 
     async def user_remind_working(self, user):
         ch = self.get_channel(self.config.get_main_channel())
-        await ch.send(self.config.get_message('remind').format(user.mention))
+        msg = await ch.send(self.config.get_message('remind').format(user.mention))
+        await msg.add_reaction('\N{WHITE HEAVY CHECK MARK}')
+        await msg.add_reaction('\N{CROSS MARK}')
+        self.state.set_prompt(user.id, msg.id)
         self.state.set_remind(user.id, time.time())

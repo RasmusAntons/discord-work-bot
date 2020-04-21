@@ -43,6 +43,9 @@ class State:
     def get_remind(self, user_id):
         return self.get_user_attr(user_id, 'remind')
 
+    def get_prompt(self, user_id):
+        return self.get_user_attr(user_id, 'prompt')
+
     def get_user_conf(self, user_id, key):
         res = self.get_user_attr(user_id, 'conf_' + key)
         return res or self.config.get(key)
@@ -62,6 +65,9 @@ class State:
 
     def set_remind(self, user_id, ts):
         self.set_user_attr(user_id, 'remind', ts)
+
+    def set_prompt(self, user_id, message_id):
+        self.set_user_attr(user_id, 'prompt', message_id)
 
     def set_user_conf(self, user_id, key, value):
         self.set_user_attr(user_id, 'conf_' + key, value)
@@ -86,7 +92,7 @@ class State:
         if res:
             awake_cooldown = self.get_user_conf(user_id, 'awake_cooldown_h') * 3600
             sleep_min = self.get_user_conf(user_id, 'sleep_min_h') * 3600
-            if (ts - res['awake']) > awake_cooldown and (ts - res['last_active']) > sleep_min:
+            if (ts - (res['awake'] or 0)) > awake_cooldown and (ts - res['last_active']) > sleep_min:
                 obj['awake'] = ts
                 awoken = res['enabled']
             self.users.update(obj, user.id == user_id)

@@ -7,6 +7,7 @@
 	"sleep_min_h": 5.0,
 	"work_delay_h": 5.0,
 	"work_duration_h": 5.0,
+	"remind_interval_h": 1.0,
 	"main_channel": 700043180229263410,
 	"voice_channel": 627216768318046225,
 	"messages": {
@@ -15,8 +16,9 @@
 		"working_cmd": "Ok, starting work time {}",
 		"enable": "Enabling work reminders for you, {}",
 		"disable": "Disabling work reminders for you, {}",
-		"done_timer": "{}, time is up. You're better done with work now!",
+		"done_timer": "{}, time is up. Did you get your work done sufficiently?",
 		"done_cmd": "{}, that's great! UwU",
-		"remind": "{} are you working now?"
+		"remind": "{} are you working now?",
+		"failure": "THAT IS NOT ACCEPTABLE {}!!! Please do better tomorrow. And go to sleep as soon as possible, no fun allowed!"
 	}
 }
