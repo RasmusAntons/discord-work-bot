@@ -3,7 +3,7 @@ from tinydb.operations import delete
 import time
 
 
-default_user = {'last_active': 0, 'enabled': False, 'awake': 0, 'working': 0, 'done': False}
+default_user = {'last_active': 0, 'enabled': False, 'awake': 0, 'working': 0, 'remind': 0, 'done': False}
 
 
 class State:
@@ -40,6 +40,9 @@ class State:
     def get_enabled(self, user_id):
         return self.get_user_attr(user_id, 'enabled')
 
+    def get_remind(self, user_id):
+        return self.get_user_attr(user_id, 'remind')
+
     def get_user_conf(self, user_id, key):
         res = self.get_user_attr(user_id, 'conf_' + key)
         return res or self.config.get(key)
@@ -56,6 +59,9 @@ class State:
 
     def set_enabled(self, user_id, enabled):
         self.set_user_attr(user_id, 'enabled', enabled)
+
+    def set_remind(self, user_id, ts):
+        self.set_user_attr(user_id, 'remind', ts)
 
     def set_user_conf(self, user_id, key, value):
         self.set_user_attr(user_id, 'conf_' + key, value)

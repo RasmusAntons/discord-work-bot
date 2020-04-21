@@ -1,7 +1,7 @@
 import json
 
 
-user_settable = ['awake_cooldown_h', 'sleep_min_h', 'work_delay_h', 'work_duration_h']
+user_settable = ['awake_cooldown_h', 'sleep_min_h', 'work_delay_h', 'work_duration_h', 'remind_interval_h']
 
 
 class Config:
@@ -32,6 +32,9 @@ class Config:
 
     def get_work_duration(self):
         return self.conf['work_duration_h'] * 3600
+
+    def get_remind_interval(self):
+        return self.conf['remind_interval_h'] * 3600
 
     def get_message(self, key):
         return self.conf['messages'].get(key)

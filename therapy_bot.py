@@ -22,10 +22,13 @@ class TherapyBot(discord.Client):
                 ts = time.time()
                 work_delay = self.state.get_user_conf(user['id'], 'work_delay_h') * 3600
                 work_duration = self.state.get_user_conf(user['id'], 'work_duration_h') * 3600
+                reminder_interval = self.state.get_user_conf(user['id'], 'remind_interval_h') * 3600
                 if user['awake'] > user['working'] and (ts - user['awake']) > work_delay:
                     await self.user_start_working(self.get_user(user['id']))
                 elif not user['done'] and (ts - user['working']) > work_duration:
                     await self.user_stop_working(self.get_user(user['id']))
+                elif not user['done'] and (ts - user['reminded']) > reminder_interval:
+                    await self.user_remind_working(self.get_user(user['id']))
             await asyncio.sleep(self.config.get_background_delay())
 
     async def on_message(self, msg):
@@ -85,7 +88,8 @@ class TherapyBot(discord.Client):
     async def user_awake(self, user, channel=None):
         ch = channel or self.get_channel(self.config.get_main_channel())
         msg = self.config.get_message('awake')
-        await ch.send(msg.format(user.mention))
+        work_delay = self.state.get_user_conf(user['id'], 'work_delay_h') * 3600
+        await ch.send(msg.format(user.mention, work_delay))
 
     async def user_start_working(self, user, message='working_timer', channel=None):
         ch = channel or self.get_channel(self.config.get_main_channel())
@@ -97,3 +101,8 @@ class TherapyBot(discord.Client):
         ch = channel or self.get_channel(self.config.get_main_channel())
         await ch.send(self.config.get_message(message).format(user.mention))
         self.state.set_done(user.id, True)
+
+    async def user_remind_working(self, user):
+        ch = self.get_channel(self.config.get_main_channel())
+        await ch.send(self.config.get_message('remind').format(user.mention))
+        self.state.set_remind(user.id, time.time())
