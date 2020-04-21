@@ -75,6 +75,7 @@ class TherapyBot(discord.Client):
                     f"\tlast active: {last_active}",
                     f"\tawake: {awake}",
                     f"\tworking: {working}",
+                    f"\tdone: {self.state.get_done(msg.author.id)}",
                     f"\tconfig:"
                 ]
                 for key in config.user_settable:
