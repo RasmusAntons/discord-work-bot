@@ -2,6 +2,8 @@ import discord
 import asyncio
 from state import State
 import time
+from datetime import datetime
+import config
 
 
 class TherapyBot(discord.Client):
@@ -18,9 +20,11 @@ class TherapyBot(discord.Client):
         while True:
             for user in self.state.get_enabled_users():
                 ts = time.time()
-                if user['awake'] > user['working'] and (ts - user['awake']) > self.config.get_work_delay():
+                work_delay = self.state.get_user_conf(user['id'], 'work_delay_h') * 3600
+                work_duration = self.state.get_user_conf(user['id'], 'work_duration_h') * 3600
+                if user['awake'] > user['working'] and (ts - user['awake']) > work_delay:
                     await self.user_start_working(self.get_user(user['id']))
-                elif user['working'] > 0 and (ts - user['working']) > self.config.get_work_duration():
+                elif not user['done'] and (ts - user['working']) > work_duration:
                     await self.user_stop_working(self.get_user(user['id']))
             await asyncio.sleep(self.config.get_background_delay())
 
@@ -41,6 +45,41 @@ class TherapyBot(discord.Client):
             elif cmd == "disable":
                 self.state.set_enabled(msg.author.id, False)
                 await msg.channel.send(self.config.get_message('disable').format(msg.author.mention))
+            elif cmd.startswith("set"):
+                err_msg = f'{msg.author.mention} invalid config key, valid keys are: ' + ', '.join(config.user_settable)
+                try:
+                    _, key, value = cmd.split(' ')
+                    if key in config.user_settable:
+                        if value.lower() == 'none':
+                            self.state.unset_user_conf(msg.author.id, key)
+                            await msg.channel.send(f'{msg.author.mention} ok, unset {key}')
+                            return
+                        try:
+                            value = float(value)
+                            self.state.set_user_conf(msg.author.id, key, value)
+                            await msg.channel.send(f'{msg.author.mention} ok, set {key} to {value}')
+                        except ValueError:
+                            await msg.channel.send(f'{msg.author.mention} that\'s not a number!')
+                    else:
+                        await msg.channel.send(err_msg)
+                except ValueError:
+                    await msg.channel.send(err_msg)
+            elif cmd == "info":
+                current = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                last_active = datetime.fromtimestamp(self.state.get_last_active(msg.author.id)).strftime("%Y-%m-%d %H:%M:%S")
+                awake = datetime.fromtimestamp(self.state.get_awake(msg.author.id)).strftime("%Y-%m-%d %H:%M:%S")
+                working = datetime.fromtimestamp(self.state.get_working(msg.author.id)).strftime("%Y-%m-%d %H:%M:%S")
+                res = [
+                    f"{msg.author.mention} at {current}:",
+                    f"\tenabled: {self.state.get_enabled(msg.author.id)}",
+                    f"\tlast active: {last_active}",
+                    f"\tawake: {awake}",
+                    f"\tworking: {working}",
+                    f"\tconfig:"
+                ]
+                for key in config.user_settable:
+                    res.append(f"\t\t{key}: {self.state.get_user_conf(msg.author.id, key)}")
+                await msg.channel.send('\n'.join(res))
 
     async def user_awake(self, user, channel=None):
         ch = channel or self.get_channel(self.config.get_main_channel())
@@ -51,8 +90,9 @@ class TherapyBot(discord.Client):
         ch = channel or self.get_channel(self.config.get_main_channel())
         await ch.send(self.config.get_message(message).format(user.mention))
         self.state.set_working(user.id, time.time())
+        self.state.set_done(user, False)
 
     async def user_stop_working(self, user, message='done_timer', channel=None):
         ch = channel or self.get_channel(self.config.get_main_channel())
         await ch.send(self.config.get_message(message).format(user.mention))
-        self.state.set_working(user.id, 0)
+        self.state.set_done(user.id, True)

@@ -1,6 +1,9 @@
 import json
 
 
+user_settable = ['awake_cooldown_h', 'sleep_min_h', 'work_delay_h', 'work_duration_h']
+
+
 class Config:
     def __init__(self, filename):
         self.filename = filename
@@ -32,6 +35,9 @@ class Config:
 
     def get_message(self, key):
         return self.conf['messages'].get(key)
+
+    def get(self, key):
+        return self.conf.get(key)
 
     def reload(self):
         self.conf = json.load(open(self.filename))
