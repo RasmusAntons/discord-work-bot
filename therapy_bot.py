@@ -101,8 +101,8 @@ class TherapyBot(discord.Client):
     async def user_awake(self, user, channel=None):
         ch = channel or self.get_channel(self.config.get_main_channel())
         msg = self.config.get_message('awake')
-        work_delay = self.state.get_user_conf(user.id, 'work_delay_h') * 3600
-        await ch.send(msg.format(user.mention, work_delay))
+        work_delay_h = self.state.get_user_conf(user.id, 'work_delay_h')
+        await ch.send(msg.format(user.mention, work_delay_h))
 
     async def user_start_working(self, user, message='working_timer', channel=None):
         ch = channel or self.get_channel(self.config.get_main_channel())
