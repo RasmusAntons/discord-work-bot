@@ -44,7 +44,7 @@ class TherapyBot(discord.Client):
             elif cmd == "start":
                 await self.user_start_working(msg.author, 'working_cmd', msg.channel)
             elif cmd == "done":
-                await self.user_stop_working(msg.author, 'done_cmd', msg.channel)
+                await self.user_stop_working(msg.author, 'done_cmd', msg.channel, False)
             elif cmd == "enable":
                 self.state.set_enabled(msg.author.id, True)
                 await msg.channel.send(self.config.get_message('enable').format(msg.author.mention))
@@ -115,12 +115,15 @@ class TherapyBot(discord.Client):
         self.state.set_remind(user.id, ts)
         self.state.set_done(user.id, False)
 
-    async def user_stop_working(self, user, message='done_timer', channel=None):
+    async def user_stop_working(self, user, message='done_timer', channel=None, prompt=True):
         ch = channel or self.get_channel(self.config.get_main_channel())
         msg = await ch.send(self.config.get_message(message).format(user.mention))
-        await msg.add_reaction('\N{WHITE HEAVY CHECK MARK}')
-        await msg.add_reaction('\N{CROSS MARK}')
-        self.state.set_prompt(user.id, msg.id)
+        if prompt:
+            await msg.add_reaction('\N{WHITE HEAVY CHECK MARK}')
+            await msg.add_reaction('\N{CROSS MARK}')
+            self.state.set_prompt(user.id, msg.id)
+        else:
+            self.state.set_prompt(user.id, 0)
         self.state.set_done(user.id, True)
 
     async def user_remind_working(self, user):
