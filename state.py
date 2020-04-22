@@ -95,7 +95,7 @@ class State:
         if res:
             awake_cooldown = self.get_user_conf(user_id, 'awake_cooldown_h') * 3600
             sleep_min = self.get_user_conf(user_id, 'sleep_min_h') * 3600
-            if (ts - (res['awake'] or 0)) > awake_cooldown and (ts - res['last_active']) > sleep_min:
+            if (ts - (res.get('awake') or 0)) > awake_cooldown and (ts - (res.get('last_active') or 0)) > sleep_min:
                 obj['awake'] = ts
                 awoken = res['enabled']
             self.users.update(obj, user.id == user_id)
