@@ -54,6 +54,9 @@ class State:
         user = Query()
         self.users.update({key: value}, user.id == user_id)
 
+    def set_awake(self, user_id, ts):
+        self.set_user_attr(user_id, 'awake', ts)
+
     def set_working(self, user_id, ts):
         self.set_user_attr(user_id, 'working', ts)
 

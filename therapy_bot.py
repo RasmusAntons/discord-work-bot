@@ -38,7 +38,10 @@ class TherapyBot(discord.Client):
             await self.user_awake(msg.author, msg.channel)
         if msg.content.startswith("!work"):
             cmd = msg.content[5:].strip()
-            if cmd == "start":
+            if cmd == "awake":
+                self.state.set_awake(msg.author.id, time.time())
+                await self.user_awake(msg.author, msg.channel)
+            elif cmd == "start":
                 await self.user_start_working(msg.author, 'working_cmd', msg.channel)
             elif cmd == "done":
                 await self.user_stop_working(msg.author, 'done_cmd', msg.channel)
