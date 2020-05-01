@@ -46,5 +46,5 @@ class Markov:
                 m = self.model_all.make_sentence()
                 if m:
                     await channel.send(m)
-		    break
+                    break
             keep_talking = bool(random.getrandbits(1))
