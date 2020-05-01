@@ -31,7 +31,7 @@ class Markov:
                     text = msg.content
                     msg_all.append(text)
         self.model_all = markovify.NewlineText('\n'.join(msg_all))
-        orig_msg.channel.send('compiling...')
+        await orig_msg.channel.send('compiling...')
         self.model_all = self.model_all.compile(inplace=True)
         with open(FILENAME, 'w') as f:
             f.write(self.model_all.to_json())
@@ -43,6 +43,8 @@ class Markov:
         keep_talking = True
         while keep_talking:
             for i in range(100):
-                if m := self.model_all.make_sentence():
+                m = self.model_all.make_sentence()
+                if m:
                     await channel.send(m)
+		    break
             keep_talking = bool(random.getrandbits(1))
