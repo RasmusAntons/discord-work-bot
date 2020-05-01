@@ -33,8 +33,10 @@ class TherapyBot(discord.Client):
                     await self.user_stop_working(self.get_user(user['id']))
                 elif not user['done'] and (ts - user['remind']) > reminder_interval:
                     await self.user_remind_working(self.get_user(user['id']))
-            if time.time() - self.prev_talk > 1800 and datetime.now().hour in self.config.get_talk_hours() and datetime.now().minute < 25:
+            ts = time.time()
+            if ts - self.prev_talk > 360 and datetime.now().hour in self.config.get_talk_hours() and datetime.now().minute < 5:
                 await self.markov.talk(self.get_channel(self.config.get_main_channel()))
+                self.prev_talk = ts
             await asyncio.sleep(self.config.get_background_delay())
 
     async def on_message(self, msg):
