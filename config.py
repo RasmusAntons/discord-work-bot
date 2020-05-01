@@ -12,8 +12,8 @@ class Config:
     def get_discord_token(self):
         return self.conf['discord']['token']
 
-    #def get_main_channel(self):
-    #    return self.conf['main_channel']
+    def get_main_channel(self):
+        return self.conf['main_channel']
 
     def get_work_channel(self):
         return self.conf['work_channel']
