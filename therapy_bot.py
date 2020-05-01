@@ -18,7 +18,7 @@ class TherapyBot(discord.Client):
     async def on_ready(self):
         print('I\'m in.')
         self.loop.create_task(self.background_task())
-        await self.markov.talk(self.get_channel(self.config.get_main_channel()))
+        await self.markov.talk(self.get_channel(self.config.get_work_channel()))
 
     async def background_task(self):
         while True:
@@ -113,13 +113,13 @@ class TherapyBot(discord.Client):
                     await msg.channel.send(self.config.get_message('failure').format(user.mention))
 
     async def user_awake(self, user, channel=None):
-        ch = channel or self.get_channel(self.config.get_main_channel())
+        ch = channel or self.get_channel(self.config.get_work_channel())
         msg = self.config.get_message('awake')
         work_delay_h = self.state.get_user_conf(user.id, 'work_delay_h')
         await ch.send(msg.format(user.mention, work_delay_h))
 
     async def user_start_working(self, user, message='working_timer', channel=None):
-        ch = channel or self.get_channel(self.config.get_main_channel())
+        ch = channel or self.get_channel(self.config.get_work_channel())
         ts = time.time()
         await ch.send(self.config.get_message(message).format(user.mention))
         self.state.set_working(user.id, ts)
@@ -127,7 +127,7 @@ class TherapyBot(discord.Client):
         self.state.set_done(user.id, False)
 
     async def user_stop_working(self, user, message='done_timer', channel=None, prompt=True):
-        ch = channel or self.get_channel(self.config.get_main_channel())
+        ch = channel or self.get_channel(self.config.get_work_channel())
         msg = await ch.send(self.config.get_message(message).format(user.mention))
         if prompt:
             await msg.add_reaction('\N{WHITE HEAVY CHECK MARK}')
@@ -138,7 +138,7 @@ class TherapyBot(discord.Client):
         self.state.set_done(user.id, True)
 
     async def user_remind_working(self, user):
-        ch = self.get_channel(self.config.get_main_channel())
+        ch = self.get_channel(self.config.get_work_channel())
         msg = await ch.send(self.config.get_message('remind').format(user.mention))
         await msg.add_reaction('\N{WHITE HEAVY CHECK MARK}')
         await msg.add_reaction('\N{CROSS MARK}')
