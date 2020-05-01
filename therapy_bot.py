@@ -18,6 +18,7 @@ class TherapyBot(discord.Client):
     async def on_ready(self):
         print('I\'m in.')
         self.loop.create_task(self.background_task())
+        await self.markov.talk(self.get_channel(self.config.get_main_channel()))
 
     async def background_task(self):
         while True:
@@ -33,7 +34,7 @@ class TherapyBot(discord.Client):
                 elif not user['done'] and (ts - user['remind']) > reminder_interval:
                     await self.user_remind_working(self.get_user(user['id']))
             if time.time() - self.prev_talk > 1800 and datetime.now().hour in self.config.get_talk_hours() and datetime.now().minute < 25:
-                await self.markov.talk(self.get_channel(self.config.get_main_channel))
+                await self.markov.talk(self.get_channel(self.config.get_main_channel()))
             await asyncio.sleep(self.config.get_background_delay())
 
     async def on_message(self, msg):
