@@ -10,6 +10,9 @@
 	"remind_interval_h": 1.0,
 	"main_channel": 700043180229263410,
 	"voice_channel": 627216768318046225,
+	"markov_channels": [681978538550624299, 627216768318046221, 644273894412517406, 700043180229263410, 654529511358201916, 669513665791393825],
+	"talk_hours": [15, 23],
+	"ops": [177438227563675648],
 	"messages": {
 		"awake": "Good morning {}, I'll give you {} hours to start working.",
 		"working_timer": "Time to work, {}!",

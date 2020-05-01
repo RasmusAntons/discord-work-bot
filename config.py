@@ -39,6 +39,15 @@ class Config:
     def get_message(self, key):
         return self.conf['messages'].get(key)
 
+    def is_op(self, user_id):
+        return user_id in self.conf['ops']
+
+    def get_markov_channels(self):
+        return self.conf['markov_channels']
+
+    def get_talk_hours(self):
+        return self.conf['talk_hours']
+
     def get(self, key):
         return self.conf.get(key)
 

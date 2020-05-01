@@ -1,6 +1,7 @@
 import discord
 import asyncio
 from state import State
+from markov import Markov
 import time
 from datetime import datetime
 import config
@@ -11,6 +12,8 @@ class TherapyBot(discord.Client):
         super().__init__()
         self.config = config
         self.state = State(config)
+        self.markov = Markov(self, config)
+        self.prev_talk = 0
 
     async def on_ready(self):
         print('I\'m in.')
@@ -29,6 +32,8 @@ class TherapyBot(discord.Client):
                     await self.user_stop_working(self.get_user(user['id']))
                 elif not user['done'] and (ts - user['remind']) > reminder_interval:
                     await self.user_remind_working(self.get_user(user['id']))
+            if time.time() - self.prev_talk > 1800 and datetime.now().hour in self.config.get_talk_hours() and datetime.now().minute < 25:
+                await self.markov.talk(self.get_channel(self.config.get_main_channel))
             await asyncio.sleep(self.config.get_background_delay())
 
     async def on_message(self, msg):
@@ -36,7 +41,12 @@ class TherapyBot(discord.Client):
             return
         if self.state.update_last_active(msg.author.id):
             await self.user_awake(msg.author, msg.channel)
-        if msg.content.startswith("!work"):
+        if msg.content.startswith("!markov"):
+            cmd = msg.content[7:].strip()
+            await self.markov.on_command(msg, cmd)
+        if self.user.mentioned_in(msg):
+            await self.markov.talk(msg.channel)
+        elif msg.content.startswith("!work"):
             cmd = msg.content[5:].strip()
             if cmd == "awake":
                 self.state.set_awake(msg.author.id, time.time())
