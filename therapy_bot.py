@@ -191,6 +191,7 @@ class TherapyBot(discord.Client):
                 dat = f.read()
             try:
                 await self.user.edit(avatar=dat)
+                await asyncio.sleep(2)
             except discord.HTTPException:
                 print("Cannot set avatar yet")
                 self.expression = None
