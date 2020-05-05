@@ -118,7 +118,7 @@ class TherapyBot(discord.Client):
                 await msg.add_reaction('<:dreamwuwu:643219778806218773>')
                 await self.set_avatar(Expression.HAPPY)
                 if done:
-                    pass
+                    await msg.channel.send(self.config.get_message('done_cmd').format(user.mention))
                 else:
                     self.state.set_slacking(user.id, False)
             elif reaction.emoji == '\N{CROSS MARK}':
