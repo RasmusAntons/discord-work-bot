@@ -22,8 +22,8 @@ class TherapyBot(discord.Client):
 
     async def on_ready(self):
         print('I\'m in.')
-        self.loop.create_task(self.background_task())
         await self.markov.talk(self.get_channel(self.config.get_main_channel()))
+        self.loop.create_task(self.background_task())
 
     async def background_task(self):
         while True:
