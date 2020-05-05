@@ -1,10 +1,12 @@
 import discord
 import asyncio
+from enum import Enum
 from state import State
 from markov import Markov
 import time
 from datetime import datetime
 import config
+import random
 
 
 class TherapyBot(discord.Client):
@@ -14,6 +16,9 @@ class TherapyBot(discord.Client):
         self.state = State(config)
         self.markov = Markov(self, config)
         self.prev_talk = 0
+        self.expression = None
+        self.avatar_backoff = 0
+        self.angered = 0
 
     async def on_ready(self):
         print('I\'m in.')
@@ -22,6 +27,7 @@ class TherapyBot(discord.Client):
 
     async def background_task(self):
         while True:
+            print("[background loop]")
             for user in self.state.get_enabled_users():
                 ts = time.time()
                 work_delay = self.state.get_user_conf(user['id'], 'work_delay_h') * 3600
@@ -37,6 +43,7 @@ class TherapyBot(discord.Client):
             if ts - self.prev_talk > 360 and datetime.now().hour in self.config.get_talk_hours() and datetime.now().minute < 5:
                 await self.markov.talk(self.get_channel(self.config.get_main_channel()))
                 self.prev_talk = ts
+            await self.set_avatar()
             await asyncio.sleep(self.config.get_background_delay())
 
     async def on_message(self, msg):
@@ -109,10 +116,20 @@ class TherapyBot(discord.Client):
         if prompt == msg.id:
             if reaction.emoji == '\N{WHITE HEAVY CHECK MARK}':
                 await msg.add_reaction('<:dreamwuwu:643219778806218773>')
+                await self.set_avatar(Expression.HAPPY)
+                if done:
+                    pass
+                else:
+                    self.state.set_slacking(user.id, False)
             elif reaction.emoji == '\N{CROSS MARK}':
                 await msg.add_reaction('<:angry_bird:664757860089200650>')
                 if done:
                     await msg.channel.send(self.config.get_message('failure').format(user.mention))
+                    self.angered = time.time() + 7200
+                    await self.set_avatar(Expression.ANGRY)
+                else:
+                    self.state.set_slacking(user.id, True)
+                    await self.set_avatar(Expression.THREATENING)
 
     async def user_awake(self, user, channel=None):
         ch = channel or self.get_channel(self.config.get_work_channel())
@@ -138,6 +155,7 @@ class TherapyBot(discord.Client):
         else:
             self.state.set_prompt(user.id, 0)
         self.state.set_done(user.id, True)
+        self.state.set_slacking(user.id, False)
 
     async def user_remind_working(self, user):
         ch = self.get_channel(self.config.get_work_channel())
@@ -146,3 +164,43 @@ class TherapyBot(discord.Client):
         await msg.add_reaction('\N{CROSS MARK}')
         self.state.set_prompt(user.id, msg.id)
         self.state.set_remind(user.id, time.time())
+
+    async def set_avatar(self, expression=None):
+        print('checking if avatar should change')
+        ts = time.time()
+        if ts < self.avatar_backoff:
+            print(f'waiting {self.avatar_backoff - ts:0.2f} seconds before trying again')
+            return
+        if expression is None:
+            if time.time() < self.angered:
+                expression = Expression.ANGRY
+            else:
+                expression = Expression.HAPPY
+                for user in self.state.get_enabled_users():
+                    if user['slacking']:
+                        expression = Expression.THREATENING
+                    elif not user['done'] and expression != Expression.THREATENING:
+                        expression = Expression.WORRIED
+        if expression != self.expression:
+            if self.expression is not None:
+                print(f'yes, avatar should change from {self.expression.name} to {expression.name}')
+            else:
+                print(f'yes, avatar should change to {expression.name}')
+            self.expression = expression
+            img = f'res/{random.choice(expression.value)}.png'
+            with open(img, 'rb') as f:
+                dat = f.read()
+            try:
+                await self.user.edit(avatar=dat)
+            except discord.HTTPException:
+                print("Cannot set avatar yet")
+                self.expression = None
+                self.avatar_backoff = time.time() + 600
+
+
+class Expression(Enum):
+    SURPRISED = ['re1a_bikkuri_a1_0', 're1a_bikkuri_a1_1', 're1a_bikkuri_a1_0']
+    WORRIED = ['re1a_komaru_a1_0', 're1a_komaru_a1_1', 're1a_komaru_a1_2']
+    THREATENING = ['re1a_hig_def_a1_0', 're1a_hig_def_a1_1', 're1a_hig_def_a1_2', 're1a_hig_muhyou_a1_0', 're1a_hig_muhyou_a1_1', 're1a_hig_muhyou_a1_2']
+    ANGRY = ['re1a_hig_okoru_a1_0', 're1a_hig_okoru_a1_1', 're1a_hig_okoru_a1_0']
+    HAPPY = ['re1a_warai_a1_0', 're1a_warai_a1_1', 're1a_warai_a1_2']

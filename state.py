@@ -3,7 +3,7 @@ from tinydb.operations import delete
 import time
 
 
-default_user = {'last_active': 0, 'enabled': False, 'awake': 0, 'working': 0, 'remind': 0, 'done': False}
+default_user = {'last_active': 0, 'enabled': False, 'awake': 0, 'working': 0, 'remind': 0, 'done': False, 'slacking': False}
 
 
 class State:
@@ -37,6 +37,9 @@ class State:
     def get_done(self, user_id):
         return self.get_user_attr(user_id, 'done')
 
+    def get_slacking(self, user_id):
+        return self.get_user_attr(user_id, 'slacking')
+
     def get_enabled(self, user_id):
         return self.get_user_attr(user_id, 'enabled')
 
@@ -62,6 +65,9 @@ class State:
 
     def set_done(self, user_id, done):
         self.set_user_attr(user_id, 'done', done)
+
+    def set_slacking(self, user_id, slacking):
+        self.set_user_attr(user_id, 'slacking', slacking)
 
     def set_enabled(self, user_id, enabled):
         self.set_user_attr(user_id, 'enabled', enabled)
