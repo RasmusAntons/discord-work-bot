@@ -171,16 +171,15 @@ class TherapyBot(discord.Client):
         if ts < self.avatar_backoff:
             print(f'waiting {self.avatar_backoff - ts:0.2f} seconds before trying again')
             return
-        if expression is None:
-            if time.time() < self.angered:
-                expression = Expression.ANGRY
-            else:
-                expression = Expression.HAPPY
-                for user in self.state.get_enabled_users():
-                    if user['slacking']:
-                        expression = Expression.THREATENING
-                    elif not user['done'] and expression != Expression.THREATENING:
-                        expression = Expression.WORRIED
+        if time.time() < self.angered:
+            expression = Expression.ANGRY
+        elif expression is None:
+            expression = Expression.HAPPY
+            for user in self.state.get_enabled_users():
+                if user['slacking']:
+                    expression = Expression.THREATENING
+                elif not user['done'] and expression != Expression.THREATENING:
+                    expression = Expression.WORRIED
         if expression != self.expression:
             if self.expression is not None:
                 print(f'yes, avatar should change from {self.expression.name} to {expression.name}')
