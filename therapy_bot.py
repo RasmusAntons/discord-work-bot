@@ -124,9 +124,9 @@ class TherapyBot(discord.Client):
             elif reaction.emoji == '\N{CROSS MARK}':
                 await msg.add_reaction('<:angry_bird:664757860089200650>')
                 if done:
+                    await self.set_avatar(Expression.ANGRY)
                     await msg.channel.send(self.config.get_message('failure').format(user.mention))
                     self.angered = time.time() + 7200
-                    await self.set_avatar(Expression.ANGRY)
                 else:
                     self.state.set_slacking(user.id, True)
                     await self.set_avatar(Expression.THREATENING)
