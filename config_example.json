@@ -1,7 +1,5 @@
 {
-	"discord": {
-		"token": ""
-	},
+	"discord_token": "",
 	"background_delay_s": 5.0,
 	"awake_cooldown_h": 18.0,
 	"sleep_min_h": 5.0,
