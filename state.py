@@ -52,7 +52,7 @@ class State:
         user = Query()
         res = self.users.get(user.id == user_id)
         if res:
-            val = res.get(key)
+            val = res.get(key.value)
             if val is None:
                 return self.config.get_by_id(key.value) if key in user_conf else default
             return val

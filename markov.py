@@ -1,13 +1,14 @@
 import markovify
 import os
 import random
+from config import Config, ConfKey
 
 
 FILENAME = 'markov.json'
 
 
 class Markov:
-    def __init__(self, bot, config):
+    def __init__(self, bot, config: Config):
         self.bot = bot
         self.config = config
         self.model_all = None
@@ -23,8 +24,8 @@ class Markov:
     async def regenerate(self, orig_msg):
         msg_all = []
         n = 0
-        for i, channel in enumerate(self.config.get_markov_channels()):
-            await orig_msg.channel.send(f'generating {i + 1}/{len(self.config.get_markov_channels())}')
+        for i, channel in enumerate(self.config.get(ConfKey.MARKOV_CHANNELS)):
+            await orig_msg.channel.send(f'generating {i + 1}/{len(self.config.get(ConfKey.MARKOV_CHANNELS))}')
             async for msg in self.bot.get_channel(channel).history(limit=10**5):
                 if not msg.author.bot:
                     n += 1
