@@ -138,13 +138,17 @@ class TherapyBot(discord.Client):
     async def user_start_working(self, user, message=MsgKey.WORKING_TIMER, channel=None):
         ch = channel or self.get_channel(self.config.get(ConfKey.WORK_CHANNEL))
         ts = time.time()
-        await ch.send(self.config.get_msg(message).format(user.mention))
         self.state.set_user_key(user.id, UserKey.WORKING, ts)
         self.state.set_user_key(user.id, UserKey.REMIND_INTERVAL, ts)
         self.state.set_user_key(user.id, UserKey.DONE, False)
+        await self.set_avatar()
+        await ch.send(self.config.get_msg(message).format(user.mention))
 
     async def user_stop_working(self, user, message=MsgKey.DONE_TIMER, channel=None, prompt=True):
         ch = channel or self.get_channel(self.config.get(ConfKey.WORK_CHANNEL))
+        self.state.set_user_key(user.id, UserKey.DONE, True)
+        self.state.set_user_key(user.id, UserKey.SLACKING, False)
+        await self.set_avatar()
         msg = await ch.send(self.config.get_msg(message).format(user.mention))
         if prompt:
             await msg.add_reaction('\N{WHITE HEAVY CHECK MARK}')
@@ -152,8 +156,6 @@ class TherapyBot(discord.Client):
             self.state.set_user_key(user.id, UserKey.PROMPT, msg.id)
         else:
             self.state.set_user_key(user.id, UserKey.PROMPT, 0)
-        self.state.set_user_key(user.id, UserKey.DONE, True)
-        self.state.set_user_key(user.id, UserKey.SLACKING, False)
 
     async def user_remind_working(self, user):
         ch = self.get_channel(self.config.get(ConfKey.WORK_CHANNEL))
