@@ -1,11 +1,11 @@
 import argparse
-from config import Config
+from config import Config, ConfKey
 from therapy_bot import TherapyBot
 
 
 def run_bot(config):
     disc = TherapyBot(config)
-    disc.loop.run_until_complete(disc.login(config.get_discord_token()))
+    disc.loop.run_until_complete(disc.login(config.get(ConfKey.DISCORD_TOKEN)))
     disc.loop.run_until_complete(disc.connect())
 
 

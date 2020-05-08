@@ -1,7 +1,33 @@
 import json
+from enum import Enum
 
 
-user_settable = ['awake_cooldown_h', 'sleep_min_h', 'work_delay_h', 'work_duration_h', 'remind_interval_h']
+class ConfKey(Enum):
+    DISCORD_TOKEN = 'discord_token'
+    MAIN_CHANNEL = 'main_channel'
+    WORK_CHANNEL = 'work_channel'
+    VOICE_CHANNEL = 'voice_channel'
+    AWAKE_COOLDOWN = 'awake_cooldown_h'
+    SLEEP_MIN = 'sleep_min_h'
+    WORK_DELAY = 'work_delay_h'
+    WORK_DURATION = 'work_duration_h'
+    REMIND_INTERVAL = 'remind_interval_h'
+    BACKGROUND_DELAY = 'background_delay_s'
+    MESSAGES = 'messages'
+    MARKOV_CHANNELS = 'markov_channels'
+    TALK_HOURS = 'talk_hours'
+
+
+class MsgKey(Enum):
+    AWAKE = 'awake'
+    WORKING_TIMER = 'working_timer'
+    WORKING_CMD = 'working_cmd'
+    ENABLE = 'enable'
+    DISABLE = 'disable'
+    DONE_TIMER = 'done_timer'
+    DONE_CMD = 'done_cmd'
+    REMIND = 'remind'
+    FAILURE = 'failure'
 
 
 class Config:
@@ -9,50 +35,14 @@ class Config:
         self.filename = filename
         self.conf = json.load(open(filename))
 
-    def get_discord_token(self):
-        return self.conf['discord']['token']
+    def get(self, key: ConfKey):
+        return self.conf.get(key.value)
 
-    def get_main_channel(self):
-        return self.conf['main_channel']
-
-    def get_work_channel(self):
-        return self.conf['work_channel']
-
-    def get_voice_channel(self):
-        return self.conf['voice_channel']
-
-    def get_background_delay(self):
-        return self.conf['background_delay_s']
-
-    def get_awake_cooldown(self):
-        return self.conf['awake_cooldown_h'] * 3600
-
-    def get_sleep_min(self):
-        return self.conf['sleep_min_h'] * 3600
-
-    def get_work_delay(self):
-        return self.conf['work_delay_h'] * 3600
-
-    def get_work_duration(self):
-        return self.conf['work_duration_h'] * 3600
-
-    def get_remind_interval(self):
-        return self.conf['remind_interval_h'] * 3600
-
-    def get_message(self, key):
-        return self.conf['messages'].get(key)
-
-    def is_op(self, user_id):
-        return user_id in self.conf['ops']
-
-    def get_markov_channels(self):
-        return self.conf['markov_channels']
-
-    def get_talk_hours(self):
-        return self.conf['talk_hours']
-
-    def get(self, key):
+    def get_by_id(self, key):
         return self.conf.get(key)
+
+    def get_msg(self, key: MsgKey):
+        return self.conf[ConfKey.MESSAGES.value].get(key.value)
 
     def reload(self):
         self.conf = json.load(open(self.filename))

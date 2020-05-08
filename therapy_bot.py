@@ -1,16 +1,16 @@
 import discord
 import asyncio
 from enum import Enum
-from state import State
+from state import State, UserKey, user_conf
 from markov import Markov
+from config import Config, ConfKey, MsgKey
 import time
 from datetime import datetime
-import config
 import random
 
 
 class TherapyBot(discord.Client):
-    def __init__(self, config):
+    def __init__(self, config: Config):
         super().__init__()
         self.config = config
         self.state = State(config)
@@ -22,7 +22,7 @@ class TherapyBot(discord.Client):
 
     async def on_ready(self):
         print('I\'m in.')
-        await self.markov.talk(self.get_channel(self.config.get_main_channel()))
+        await self.markov.talk(self.get_channel(self.config.get(ConfKey.MAIN_CHANNEL)))
         self.loop.create_task(self.background_task())
 
     async def background_task(self):
@@ -30,21 +30,21 @@ class TherapyBot(discord.Client):
             print("[background loop]")
             for user in self.state.get_enabled_users():
                 ts = time.time()
-                work_delay = self.state.get_user_conf(user['id'], 'work_delay_h') * 3600
-                work_duration = self.state.get_user_conf(user['id'], 'work_duration_h') * 3600
-                reminder_interval = self.state.get_user_conf(user['id'], 'remind_interval_h') * 3600
-                if user['awake'] > user['working'] and (ts - user['awake']) > work_delay:
-                    await self.user_start_working(self.get_user(user['id']))
-                elif not user['done'] and (ts - user['working']) > work_duration:
-                    await self.user_stop_working(self.get_user(user['id']))
-                elif not user['done'] and (ts - user['remind']) > reminder_interval:
-                    await self.user_remind_working(self.get_user(user['id']))
+                work_delay = user.get(UserKey.WORK_DELAY) * 3600
+                work_duration = user.get(UserKey.WORK_DURATION) * 3600
+                reminder_interval = user.get(UserKey.REMIND_INTERVAL) * 3600
+                if user.get(UserKey.AWAKE) > user.get(UserKey.WORKING) and (ts - user.get(UserKey.AWAKE)) > work_delay:
+                    await self.user_start_working(self.get_user(user.get(UserKey.ID)))
+                elif not user.get(UserKey.DONE) and (ts - user.get(UserKey.WORKING)) > work_duration:
+                    await self.user_stop_working(self.get_user(user.get(UserKey.ID)))
+                elif not user.get(UserKey.DONE) and (ts - user.get(UserKey.REMIND)) > reminder_interval:
+                    await self.user_remind_working(self.get_user(user.get(UserKey.ID)))
             ts = time.time()
-            if ts - self.prev_talk > 360 and datetime.now().hour in self.config.get_talk_hours() and datetime.now().minute < 5:
-                await self.markov.talk(self.get_channel(self.config.get_main_channel()))
+            if ts - self.prev_talk > 360 and datetime.now().hour in self.config.get(ConfKey.TALK_HOURS) and datetime.now().minute < 5:
+                await self.markov.talk(self.get_channel(self.config.get(ConfKey.MAIN_CHANNEL)))
                 self.prev_talk = ts
             await self.set_avatar()
-            await asyncio.sleep(self.config.get_background_delay())
+            await asyncio.sleep(self.config.get(ConfKey.BACKGROUND_DELAY))
 
     async def on_message(self, msg):
         if self.user.id == msg.author.id:
@@ -59,111 +59,109 @@ class TherapyBot(discord.Client):
         elif msg.content.startswith("!work"):
             cmd = msg.content[5:].strip()
             if cmd == "awake":
-                self.state.set_awake(msg.author.id, time.time())
+                self.state.set_user_key(msg.author.id, UserKey.AWAKE, time.time())
                 await self.user_awake(msg.author, msg.channel)
             elif cmd == "start":
-                await self.user_start_working(msg.author, 'working_cmd', msg.channel)
+                await self.user_start_working(msg.author, MsgKey.WORKING_CMD, msg.channel)
             elif cmd == "done":
-                await self.user_stop_working(msg.author, 'done_cmd', msg.channel, False)
+                await self.user_stop_working(msg.author, MsgKey.DONE_CMD, msg.channel, False)
             elif cmd == "enable":
-                self.state.set_enabled(msg.author.id, True)
-                await msg.channel.send(self.config.get_message('enable').format(msg.author.mention))
+                self.state.set_user_key(msg.author.id, UserKey.ENABLED, True)
+                await msg.channel.send(self.config.get_msg(MsgKey.ENABLE).format(msg.author.mention))
             elif cmd == "disable":
-                self.state.set_enabled(msg.author.id, False)
-                await msg.channel.send(self.config.get_message('disable').format(msg.author.mention))
+                self.state.set_user_key(msg.author.id, UserKey.ENABLED, False)
+                await msg.channel.send(self.config.get_msg(MsgKey.DISABLE).format(msg.author.mention))
             elif cmd.startswith("set"):
-                err_msg = f'{msg.author.mention} invalid config key, valid keys are: ' + ', '.join(config.user_settable)
+                err_msg = f'{msg.author.mention} invalid config key, valid keys are: ' + ', '.join([e.value for e in user_conf])
                 try:
                     _, key, value = cmd.split(' ')
-                    if key in config.user_settable:
-                        if value.lower() == 'none':
-                            self.state.unset_user_conf(msg.author.id, key)
-                            await msg.channel.send(f'{msg.author.mention} ok, unset {key}')
-                            return
-                        try:
-                            value = float(value)
-                            self.state.set_user_conf(msg.author.id, key, value)
-                            await msg.channel.send(f'{msg.author.mention} ok, set {key} to {value}')
-                        except ValueError:
-                            await msg.channel.send(f'{msg.author.mention} that\'s not a number!')
-                    else:
-                        await msg.channel.send(err_msg)
+                    key: UserKey = UserKey(key)
+                    if value.lower() == 'none':
+                        self.state.set_user_key(msg.author.id, key.value, None)
+                        await msg.channel.send(f'{msg.author.mention} ok, unset {key.value}')
+                        return
+                    try:
+                        value = float(value)
+                        self.state.set_user_key(msg.author.id, key, value)
+                        await msg.channel.send(f'{msg.author.mention} ok, set {key.value} to {value}')
+                    except ValueError:
+                        await msg.channel.send(f'{msg.author.mention} that\'s not a number!')
                 except ValueError:
                     await msg.channel.send(err_msg)
             elif cmd == "info":
                 current = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                last_active = datetime.fromtimestamp(self.state.get_last_active(msg.author.id)).strftime("%Y-%m-%d %H:%M:%S")
-                awake = datetime.fromtimestamp(self.state.get_awake(msg.author.id)).strftime("%Y-%m-%d %H:%M:%S")
-                working = datetime.fromtimestamp(self.state.get_working(msg.author.id)).strftime("%Y-%m-%d %H:%M:%S")
+                last_active = datetime.fromtimestamp(self.state.get_user_key(msg.author.id, UserKey.LAST_ACTIVE)).strftime("%Y-%m-%d %H:%M:%S")
+                awake = datetime.fromtimestamp(self.state.get_user_key(msg.author.id, UserKey.AWAKE)).strftime("%Y-%m-%d %H:%M:%S")
+                working = datetime.fromtimestamp(self.state.get_user_key(msg.author.id, UserKey.WORKING)).strftime("%Y-%m-%d %H:%M:%S")
                 res = [
                     f"{msg.author.mention} at {current}:",
-                    f"\tenabled: {self.state.get_enabled(msg.author.id)}",
+                    f"\tenabled: {self.state.get_user_key(msg.author.id, UserKey.ENABLED)}",
                     f"\tlast active: {last_active}",
                     f"\tawake: {awake}",
                     f"\tworking: {working}",
-                    f"\tdone: {self.state.get_done(msg.author.id)}",
+                    f"\tdone: {self.state.get_user_key(msg.author.id, UserKey.DONE)}",
                     f"\tconfig:"
                 ]
-                for key in config.user_settable:
-                    res.append(f"\t\t{key}: {self.state.get_user_conf(msg.author.id, key)}")
+                for key in user_conf:
+                    res.append(f"\t\t{key.value}: {self.state.get_user_key(msg.author.id, key)}")
                 await msg.channel.send('\n'.join(res))
 
     async def on_reaction_add(self, reaction, user):
         msg = reaction.message
-        prompt = self.state.get_prompt(user.id)
-        done = self.state.get_done(user.id)
-        self.state.set_prompt(user.id, 0)
+        prompt = self.state.get_user_key(user.id, UserKey.PROMPT)
+        done = self.state.get_user_key(user.id, UserKey.DONE)
+        self.state.set_user_key(user.id, UserKey.PROMPT, 0)
         if prompt == msg.id:
             if reaction.emoji == '\N{WHITE HEAVY CHECK MARK}':
                 await msg.add_reaction('<:dreamwuwu:643219778806218773>')
                 await self.set_avatar(Expression.HAPPY)
                 if done:
-                    await msg.channel.send(self.config.get_message('done_cmd').format(user.mention))
+                    await msg.channel.send(self.config.get_msg(MsgKey.DONE_CMD).format(user.mention))
                 else:
-                    self.state.set_slacking(user.id, False)
+                    self.state.set_user_key(user.id, UserKey.SLACKING, False)
             elif reaction.emoji == '\N{CROSS MARK}':
                 await msg.add_reaction('<:angry_bird:664757860089200650>')
                 if done:
                     await self.set_avatar(Expression.ANGRY)
-                    await msg.channel.send(self.config.get_message('failure').format(user.mention))
+                    await msg.channel.send(self.config.get_msg(MsgKey.FAILURE).format(user.mention))
                     self.angered = time.time() + 7200
                 else:
-                    self.state.set_slacking(user.id, True)
+                    self.state.set_user_key(user.id, UserKey.SLACKING, True)
                     await self.set_avatar(Expression.THREATENING)
 
     async def user_awake(self, user, channel=None):
-        ch = channel or self.get_channel(self.config.get_work_channel())
-        msg = self.config.get_message('awake')
-        work_delay_h = self.state.get_user_conf(user.id, 'work_delay_h')
+        ch = channel or self.get_channel(self.config.get(ConfKey.WORK_CHANNEL))
+        msg = self.config.get_msg(MsgKey.AWAKE)
+        work_delay_h = self.state.get_user_key(user.id, UserKey.WORK_DELAY)
         await ch.send(msg.format(user.mention, work_delay_h))
 
-    async def user_start_working(self, user, message='working_timer', channel=None):
-        ch = channel or self.get_channel(self.config.get_work_channel())
+    async def user_start_working(self, user, message=MsgKey.WORKING_TIMER, channel=None):
+        ch = channel or self.get_channel(self.config.get(ConfKey.WORK_CHANNEL))
         ts = time.time()
-        await ch.send(self.config.get_message(message).format(user.mention))
-        self.state.set_working(user.id, ts)
-        self.state.set_remind(user.id, ts)
-        self.state.set_done(user.id, False)
+        await ch.send(self.config.get_msg(message).format(user.mention))
+        self.state.set_user_key(user.id, UserKey.WORKING, ts)
+        self.state.set_user_key(user.id, UserKey.REMIND_INTERVAL, ts)
+        self.state.set_user_key(user.id, UserKey.DONE, False)
 
-    async def user_stop_working(self, user, message='done_timer', channel=None, prompt=True):
-        ch = channel or self.get_channel(self.config.get_work_channel())
-        msg = await ch.send(self.config.get_message(message).format(user.mention))
+    async def user_stop_working(self, user, message=MsgKey.DONE_TIMER, channel=None, prompt=True):
+        ch = channel or self.get_channel(self.config.get(ConfKey.WORK_CHANNEL))
+        msg = await ch.send(self.config.get_msg(message).format(user.mention))
         if prompt:
             await msg.add_reaction('\N{WHITE HEAVY CHECK MARK}')
             await msg.add_reaction('\N{CROSS MARK}')
-            self.state.set_prompt(user.id, msg.id)
+            self.state.set_user_key(user.id, UserKey.PROMPT, msg.id)
         else:
-            self.state.set_prompt(user.id, 0)
-        self.state.set_done(user.id, True)
-        self.state.set_slacking(user.id, False)
+            self.state.set_user_key(user.id, UserKey.PROMPT, 0)
+        self.state.set_user_key(user.id, UserKey.DONE, True)
+        self.state.set_user_key(user.id, UserKey.SLACKING, False)
 
     async def user_remind_working(self, user):
-        ch = self.get_channel(self.config.get_work_channel())
-        msg = await ch.send(self.config.get_message('remind').format(user.mention))
+        ch = self.get_channel(self.config.get(ConfKey.WORK_CHANNEL))
+        msg = await ch.send(self.config.get_msg(MsgKey.REMIND).format(user.mention))
         await msg.add_reaction('\N{WHITE HEAVY CHECK MARK}')
         await msg.add_reaction('\N{CROSS MARK}')
-        self.state.set_prompt(user.id, msg.id)
-        self.state.set_remind(user.id, time.time())
+        self.state.set_user_key(user.id, UserKey.PROMPT, msg.id)
+        self.state.set_user_key(user.id, UserKey.REMIND, time.time())
 
     async def set_avatar(self, expression=None):
         print('checking if avatar should change')
@@ -176,9 +174,9 @@ class TherapyBot(discord.Client):
         elif expression is None:
             expression = Expression.HAPPY
             for user in self.state.get_enabled_users():
-                if user['slacking']:
+                if user.get(UserKey.SLACKING):
                     expression = Expression.THREATENING
-                elif not user['done'] and expression != Expression.THREATENING:
+                elif not user.get(UserKey.DONE) and expression != Expression.THREATENING:
                     expression = Expression.WORRIED
         if expression != self.expression:
             if self.expression is not None:

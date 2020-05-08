@@ -1,9 +1,44 @@
 from tinydb import TinyDB, Query
 from tinydb.operations import delete
 import time
+from enum import Enum
+from config import ConfKey
 
 
-default_user = {'last_active': 0, 'enabled': False, 'awake': 0, 'working': 0, 'remind': 0, 'done': False, 'slacking': False}
+class UserKey(Enum):
+    ID = 'id'
+    LAST_ACTIVE = 'last_active'
+    ENABLED = 'enabled'
+    AWAKE = 'awake'
+    WORKING = 'working'
+    REMIND = 'remind'
+    DONE = 'done'
+    SLACKING = 'slacking'
+    PROMPT = 'prompt'
+    AWAKE_COOLDOWN = 'awake_cooldown_h'
+    SLEEP_MIN = 'sleep_min_h'
+    WORK_DELAY = 'work_delay_h'
+    WORK_DURATION = 'work_duration_h'
+    REMIND_INTERVAL = 'remind_interval_h'
+
+
+user_conf = [UserKey.AWAKE_COOLDOWN,
+             UserKey.SLEEP_MIN,
+             UserKey.WORK_DELAY,
+             UserKey.WORK_DURATION,
+             UserKey.REMIND_INTERVAL]
+
+
+class UserState:
+    def __init__(self, init=None):
+        self.state = init if init is not None else {}
+
+    def set(self, key: UserKey, val):
+        self.state[key.value] = val
+
+    def get(self, key: UserKey, default=0):
+        r = self.state.get(key.value)
+        return r if r is not None else default
 
 
 class State:
@@ -13,99 +48,46 @@ class State:
         self.users = self.db.table('users')
         self.events = self.db.table('events')
 
-    def get_user_attr(self, user_id, key, default=0):
+    def get_user_key(self, user_id, key: UserKey, default=0):
         user = Query()
         res = self.users.get(user.id == user_id)
         if res:
-            try:
-                return res.get(key)
-            except KeyError:
-                self.set_user_attr(user_id, key, default_user[key])
-                return default_user[key]
+            val = res.get(key)
+            if val is None:
+                return self.config.get_by_id(key.value) if key in user_conf else default
+            return val
         else:
-            return default
+            return self.config.get_by_id(key.value) if key in user_conf else default
 
-    def get_last_active(self, user_id):
-        return self.get_user_attr(user_id, 'last_active')
-
-    def get_awake(self, user_id):
-        return self.get_user_attr(user_id, 'awake')
-
-    def get_working(self, user_id):
-        return self.get_user_attr(user_id, 'working')
-
-    def get_done(self, user_id):
-        return self.get_user_attr(user_id, 'done')
-
-    def get_slacking(self, user_id):
-        return self.get_user_attr(user_id, 'slacking')
-
-    def get_enabled(self, user_id):
-        return self.get_user_attr(user_id, 'enabled')
-
-    def get_remind(self, user_id):
-        return self.get_user_attr(user_id, 'remind')
-
-    def get_prompt(self, user_id):
-        return self.get_user_attr(user_id, 'prompt')
-
-    def get_user_conf(self, user_id, key):
-        res = self.get_user_attr(user_id, 'conf_' + key)
-        return res or self.config.get(key)
-
-    def set_user_attr(self, user_id, key, value):
+    def set_user_key(self, user_id, key: UserKey, val):
         user = Query()
-        self.users.update({key: value}, user.id == user_id)
-
-    def set_awake(self, user_id, ts):
-        self.set_user_attr(user_id, 'awake', ts)
-
-    def set_working(self, user_id, ts):
-        self.set_user_attr(user_id, 'working', ts)
-
-    def set_done(self, user_id, done):
-        self.set_user_attr(user_id, 'done', done)
-
-    def set_slacking(self, user_id, slacking):
-        self.set_user_attr(user_id, 'slacking', slacking)
-
-    def set_enabled(self, user_id, enabled):
-        self.set_user_attr(user_id, 'enabled', enabled)
-
-    def set_remind(self, user_id, ts):
-        self.set_user_attr(user_id, 'remind', ts)
-
-    def set_prompt(self, user_id, message_id):
-        self.set_user_attr(user_id, 'prompt', message_id)
-
-    def set_user_conf(self, user_id, key, value):
-        self.set_user_attr(user_id, 'conf_' + key, value)
-
-    def unset_user_conf(self, user_id, key):
-        user = Query()
-        self.users.update(delete('conf_' + key), user.id == user_id)
+        if val is not None:
+            self.users.upsert({key.value: val}, user.id == user_id)
+        else:
+            self.users.upsert(delete(key.value), user.id == user_id)
 
     def get_enabled_users(self):
         user = Query()
         for user in self.users.search(user.enabled == True):
-            res = default_user.copy()
-            res.update(user)
-            yield res
+            for key in user_conf:
+                if key.value not in user:
+                    user[key.value] = self.config.get_by_id(key.value)
+            yield UserState(user)
 
     def update_last_active(self, user_id):
         awoken = False
         user = Query()
-        res = self.users.get(user.id == user_id)
+        res = UserState(self.users.get(user.id == user_id))
         ts = time.time()
-        obj = {'last_active': ts}
+        res.set(UserKey.LAST_ACTIVE, ts)
         if res:
-            awake_cooldown = self.get_user_conf(user_id, 'awake_cooldown_h') * 3600
-            sleep_min = self.get_user_conf(user_id, 'sleep_min_h') * 3600
-            if (ts - (res.get('awake') or 0)) > awake_cooldown and (ts - (res.get('last_active') or 0)) > sleep_min:
-                obj['awake'] = ts
-                awoken = res.get('enabled')
-            self.users.update(obj, user.id == user_id)
+            awake_cooldown = res.get(UserKey.AWAKE_COOLDOWN, self.config.get(ConfKey.AWAKE_COOLDOWN)) * 3600
+            sleep_min = res.get(UserKey.SLEEP_MIN, self.config.get(ConfKey.SLEEP_MIN)) * 3600
+            if (ts - res.get(UserKey.AWAKE)) > awake_cooldown and (ts - res.get(UserKey.LAST_ACTIVE)) > sleep_min:
+                res.set(UserKey.AWAKE, ts)
+                awoken = res.get(UserKey.ENABLED)
+            self.users.upsert(res.state, user.id == user_id)
         else:
-            obj['id'] = user_id
-            self.users.insert(obj)
+            res.set(UserKey.ID, user_id)
+            self.users.insert(res.state)
         return awoken
