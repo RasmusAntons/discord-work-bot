@@ -138,7 +138,7 @@ class TherapyBot(discord.Client):
         ch = channel or self.get_channel(self.config.get(ConfKey.WORK_CHANNEL))
         ts = time.time()
         self.state.set_user_key(user.id, UserKey.WORKING, ts)
-        self.state.set_user_key(user.id, UserKey.REMIND_INTERVAL, ts)
+        self.state.set_user_key(user.id, UserKey.REMIND, ts)
         self.state.set_user_key(user.id, UserKey.DONE, False)
         await self.set_avatar()
         await ch.send(self.config.get_msg(message).format(user.mention))
