@@ -79,15 +79,16 @@ class State:
         user = Query()
         res = UserState(self.users.get(user.id == user_id))
         ts = time.time()
-        res.set(UserKey.LAST_ACTIVE, ts)
         if res:
             awake_cooldown = res.get(UserKey.AWAKE_COOLDOWN, self.config.get(ConfKey.AWAKE_COOLDOWN)) * 3600
             sleep_min = res.get(UserKey.SLEEP_MIN, self.config.get(ConfKey.SLEEP_MIN)) * 3600
             if (ts - res.get(UserKey.AWAKE)) > awake_cooldown and (ts - res.get(UserKey.LAST_ACTIVE)) > sleep_min:
                 res.set(UserKey.AWAKE, ts)
                 awoken = res.get(UserKey.ENABLED)
+            res.set(UserKey.LAST_ACTIVE, ts)
             self.users.upsert(res.state, user.id == user_id)
         else:
+            res.set(UserKey.LAST_ACTIVE, ts)
             res.set(UserKey.ID, user_id)
             self.users.insert(res.state)
         return awoken

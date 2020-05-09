@@ -16,7 +16,7 @@ class TherapyBot(discord.Client):
         self.state = State(config)
         self.markov = Markov(self, config)
         self.prev_talk = 0
-        self.expression = None
+        self.expression = None # todo: actual avatar
         self.avatar_backoff = 0
         self.angered = 0
 
@@ -27,7 +27,6 @@ class TherapyBot(discord.Client):
 
     async def background_task(self):
         while True:
-            print("[background loop]")
             for user in self.state.get_enabled_users():
                 ts = time.time()
                 work_delay = user.get(UserKey.WORK_DELAY) * 3600
@@ -166,7 +165,6 @@ class TherapyBot(discord.Client):
         self.state.set_user_key(user.id, UserKey.REMIND, time.time())
 
     async def set_avatar(self, expression=None):
-        print('checking if avatar should change')
         ts = time.time()
         if ts < self.avatar_backoff:
             print(f'waiting {self.avatar_backoff - ts:0.2f} seconds before trying again')
