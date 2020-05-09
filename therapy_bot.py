@@ -113,7 +113,7 @@ class TherapyBot(discord.Client):
         if prompt == msg.id:
             if reaction.emoji == '\N{WHITE HEAVY CHECK MARK}':
                 await msg.add_reaction('<:dreamwuwu:643219778806218773>')
-                await self.set_avatar(Expression.HAPPY)
+                await self.set_avatar()
                 if done:
                     await msg.channel.send(self.config.get_msg(MsgKey.DONE_CMD).format(user.mention))
                 else:
