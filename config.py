@@ -46,8 +46,12 @@ class Config:
         return self.conf[ConfKey.MESSAGES.value].get(key.value)
 
     def get_emoji(self, user_id):
-        res = self.conf[ConfKey.USERS].get(str(user_id))
+        res = self.conf[ConfKey.USERS.value].get(str(user_id))
         return res['emoji'] if res else None
+
+    def get_name(self, user_id):
+        res = self.conf[ConfKey.USERS.value].get(str(user_id))
+        return res['name'] if res else None
 
     def reload(self):
         self.conf = json.load(open(self.filename))

@@ -6,7 +6,9 @@ from markov import Markov
 from config import Config, ConfKey, MsgKey
 import time
 from datetime import datetime
+from queue import Queue
 import random
+import os
 
 
 class TherapyBot(discord.Client):
@@ -23,11 +25,12 @@ class TherapyBot(discord.Client):
         self.guessing_target = None
         self.guesses = []
         self.guessing_blocked = False
+        self.audio_queue = Queue()
 
     async def on_ready(self):
         print('I\'m in.')
         await self.markov.load_models()
-        await self.markov.talk(self.get_channel(self.config.get(ConfKey.MAIN_CHANNEL)))
+        # await self.markov.talk(self.get_channel(self.config.get(ConfKey.MAIN_CHANNEL)))
         self.loop.create_task(self.background_task())
 
     async def background_task(self):
@@ -63,6 +66,17 @@ class TherapyBot(discord.Client):
         elif msg.content == "!gg":
             if not self.guessing_blocked:
                 await self.start_guessing_game(msg.channel)
+        elif msg.content.startswith("!testmsg "):
+            _, msg_id, usr_name = msg.content.split(' ')
+            msg_key = MsgKey(msg_id)
+            usr_id = 0
+            for id_str, info in self.config.get(ConfKey.USERS).items():
+                if info['name'] == usr_name:
+                    usr_id = int(id_str)
+                    break
+            else:
+                await msg.channel.send('I don\'t know who that is')
+            await self.play_message_snd(msg_key, usr_id=usr_id, name_first=(msg_key == MsgKey.FAILURE))
         elif msg.content.startswith("!work"):
             cmd = msg.content[5:].strip()
             if cmd == "awake":
@@ -155,6 +169,7 @@ class TherapyBot(discord.Client):
         msg = self.config.get_msg(MsgKey.AWAKE)
         work_delay_h = self.state.get_user_key(user.id, UserKey.WORK_DELAY)
         await ch.send(msg.format(user.mention, work_delay_h))
+        await self.play_message_snd(MsgKey.AWAKE, user.id)
 
     async def user_start_working(self, user, message=MsgKey.WORKING_TIMER, channel=None):
         ch = channel or self.get_channel(self.config.get(ConfKey.WORK_CHANNEL))
@@ -164,6 +179,7 @@ class TherapyBot(discord.Client):
         self.state.set_user_key(user.id, UserKey.DONE, False)
         await self.set_avatar()
         await ch.send(self.config.get_msg(message).format(user.mention))
+        await self.play_message_snd(message, user.id)
 
     async def user_stop_working(self, user, message=MsgKey.DONE_TIMER, channel=None, prompt=True):
         ch = channel or self.get_channel(self.config.get(ConfKey.WORK_CHANNEL))
@@ -177,6 +193,7 @@ class TherapyBot(discord.Client):
             self.state.set_user_key(user.id, UserKey.PROMPT, msg.id)
         else:
             self.state.set_user_key(user.id, UserKey.PROMPT, 0)
+        await self.play_message_snd(message, user.id)
 
     async def user_remind_working(self, user):
         ch = self.get_channel(self.config.get(ConfKey.WORK_CHANNEL))
@@ -185,6 +202,7 @@ class TherapyBot(discord.Client):
         await msg.add_reaction('\N{CROSS MARK}')
         self.state.set_user_key(user.id, UserKey.PROMPT, msg.id)
         self.state.set_user_key(user.id, UserKey.REMIND, time.time())
+        await self.play_message_snd(MsgKey.REMIND, user.id)
 
     async def start_guessing_game(self, channel=None):
         if channel is None:
@@ -238,6 +256,51 @@ class TherapyBot(discord.Client):
                 print("Cannot set avatar yet")
                 self.expression = None
                 self.avatar_backoff = time.time() + 600
+
+    async def play_message_snd(self, msg: MsgKey, usr_id=None, name_first=False):
+        usr_name = self.config.get_name(usr_id)
+        ch = self.get_channel(self.config.get(ConfKey.VOICE_CHANNEL))
+        for member in ch.members:
+            if member.id == usr_id:
+                break
+        else:
+            return
+        msg_opts = []
+        i = 0
+        while os.path.exists(f'res/{msg.value}_{i}.wav'):
+            msg_opts.append(f'res/{msg.value}_{i}.wav')
+            i += 1
+        init = self.audio_queue.empty()
+        if not name_first:
+            self.audio_queue.put(random.choice(msg_opts))
+            if usr_name is not None:
+                self.audio_queue.put(f'res/{usr_name}.wav')
+        else:
+            if usr_name is not None:
+                self.audio_queue.put(f'res/{usr_name}.wav')
+                self.audio_queue.put(3)
+            self.audio_queue.put(random.choice(msg_opts))
+        self.audio_queue.put(1)
+        if init:
+            for old_vc in self.voice_clients:
+                old_vc: discord.VoiceClient
+                if old_vc.is_connected():
+                    vc = old_vc
+                    break
+            else:
+                vc = await ch.connect()
+
+            def on_complete(err):
+                if not self.audio_queue.empty():
+                    e = self.audio_queue.get()
+                    if type(e) == int:
+                        time.sleep(e)
+                        on_complete(None)
+                    else:
+                        vc.play(discord.FFmpegPCMAudio(e), after=on_complete)
+                else:
+                    asyncio.run_coroutine_threadsafe(vc.disconnect(), vc.loop)
+            vc.play(discord.FFmpegPCMAudio(self.audio_queue.get()), after=on_complete)
 
 
 class Expression(Enum):
