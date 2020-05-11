@@ -139,10 +139,10 @@ class TherapyBot(discord.Client):
                     if reaction.emoji == info['emoji']:
                         if self.guessing_target == int(uid_str):
                             self.guessing_prompt = None
-                            await msg.channel.send(f'{msg.author.mention} won the guessing game by guessing {self.get_user(self.guessing_target).display_name}')
+                            await msg.channel.send(f'{user.mention} won the guessing game by guessing {self.get_user(self.guessing_target).display_name}')
                         else:
-                            self.guesses.append(msg.author.id)
-                            await msg.channel.send(f'{msg.author.mention} guessed wrong')
+                            self.guesses.append(user.id)
+                            await msg.channel.send(f'{user.mention} guessed wrong')
                         break
 
     async def user_awake(self, user, channel=None):
