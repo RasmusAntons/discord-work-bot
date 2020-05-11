@@ -112,6 +112,8 @@ class TherapyBot(discord.Client):
                 await msg.channel.send('\n'.join(res))
 
     async def on_reaction_add(self, reaction, user):
+        if user.id == self.user.id:
+            return
         msg = reaction.message
         prompt = self.state.get_user_key(user.id, UserKey.PROMPT)
         done = self.state.get_user_key(user.id, UserKey.DONE)
@@ -134,7 +136,7 @@ class TherapyBot(discord.Client):
                     self.state.set_user_key(user.id, UserKey.SLACKING, True)
                     await self.set_avatar(Expression.THREATENING)
         elif self.guessing_prompt == msg.id:
-            if msg.author.id not in self.guesses:
+            if user.id not in self.guesses:
                 for uid_str, info in self.config.get(ConfKey.USERS).items():
                     if reaction.emoji == info['emoji']:
                         if self.guessing_target == int(uid_str):
