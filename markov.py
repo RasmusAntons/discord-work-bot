@@ -47,7 +47,7 @@ class Markov:
             for i in range(100):
                 m = self.model_all.make_sentence()
                 if m:
-                    await self.bot.trigger_typing()
+                    await channel.trigger_typing()
                     await asyncio.sleep(0.04 * len(m))
                     await channel.send(m)
                     break
