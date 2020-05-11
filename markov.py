@@ -36,7 +36,7 @@ class Markov:
             await msg.channel.send(f"finished regenerating, using {n} messages")
         elif cmd.startswith("imitate "):
             name = cmd[8:]
-            for id_str, info in self.config.get(ConfKey.USERS):
+            for id_str, info in self.config.get(ConfKey.USERS).items():
                 if info['name'] == name:
                     await self.talk(msg.channel, user=int(id_str))
                     break
