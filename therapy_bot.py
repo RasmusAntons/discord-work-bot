@@ -191,7 +191,7 @@ class TherapyBot(discord.Client):
         msg = await channel.send("Starting guessing game!")
         self.guessing_prompt = msg.id
         for info in users.values():
-            msg.add_reaction(info['emoji'])
+            await msg.add_reaction(info['emoji'])
         for i in range(5):
             await asyncio.sleep(20)
             if self.guessing_target is None:
