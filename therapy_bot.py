@@ -300,6 +300,7 @@ class TherapyBot(discord.Client):
                         vc.play(discord.FFmpegPCMAudio(e), after=on_complete)
                 else:
                     asyncio.run_coroutine_threadsafe(vc.disconnect(), vc.loop)
+            await asyncio.sleep(1)
             vc.play(discord.FFmpegPCMAudio(self.audio_queue.get()), after=on_complete)
 
 
