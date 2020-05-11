@@ -2,6 +2,7 @@ import markovify
 import os
 import random
 from config import Config, ConfKey
+import asyncio
 
 
 FILENAME = 'markov.json'
@@ -46,6 +47,8 @@ class Markov:
             for i in range(100):
                 m = self.model_all.make_sentence()
                 if m:
+                    await self.bot.trigger_typing()
+                    await asyncio.sleep(0.04 * len(m))
                     await channel.send(m)
                     break
             keep_talking = bool(random.getrandbits(1))
