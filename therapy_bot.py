@@ -196,7 +196,7 @@ class TherapyBot(discord.Client):
             await msg.add_reaction(info['emoji'])
         for i in range(5):
             await asyncio.sleep(20)
-            if self.guessing_target is None:
+            if self.guessing_prompt is None:
                 break
             await self.markov.talk(channel, user=self.guessing_target, cont_chance=0)
 
