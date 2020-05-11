@@ -76,7 +76,9 @@ class TherapyBot(discord.Client):
                     break
             else:
                 await msg.channel.send('I don\'t know who that is')
-            await self.play_message_snd(msg_key, usr_id=usr_id, name_first=(msg_key == MsgKey.FAILURE))
+            name_first = msg_key in [MsgKey.FAILURE, MsgKey.DONE_TIMER, MsgKey.REMIND]
+            delay = 3 if msg_key == MsgKey.FAILURE else (2 if msg_key in [MsgKey.DONE_TIMER, MsgKey.REMIND] else 0)
+            await self.play_message_snd(msg_key, usr_id, name_first, delay)
         elif msg.content.startswith("!work"):
             cmd = msg.content[5:].strip()
             if cmd == "awake":
