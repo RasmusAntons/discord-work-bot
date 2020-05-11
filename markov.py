@@ -20,7 +20,6 @@ class Markov:
         for member in self.bot.get_channel(work_channel).members:
             if not member.bot:
                 keys.append(member.id)
-                print(f'trying to load model for {member.id}')
         for key in keys:
             fn = FILENAME.format(key)
             if os.path.exists(fn):
@@ -52,7 +51,7 @@ class Markov:
                         msgs[msg.author.id] = [text]
                     else:
                         msgs[msg.author.id].append(text)
-        for key, msg in msgs:
+        for key, msg in msgs.items():
             model = markovify.NewlineText('\n'.join(msg), retain_original=False)
             self.models[key] = model.compile(inplace=True)
             with open(FILENAME.format(key), 'w') as f:
