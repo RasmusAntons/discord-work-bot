@@ -77,7 +77,7 @@ class TherapyBot(discord.Client):
             else:
                 await msg.channel.send('I don\'t know who that is')
             name_first = msg_key in [MsgKey.FAILURE, MsgKey.DONE_TIMER, MsgKey.REMIND]
-            delay = 3 if msg_key == MsgKey.FAILURE else (2 if msg_key in [MsgKey.DONE_TIMER, MsgKey.REMIND] else 0)
+            delay = 3 if msg_key == MsgKey.FAILURE else (1 if msg_key in [MsgKey.DONE_TIMER, MsgKey.REMIND] else 0)
             await self.play_message_snd(msg_key, usr_id, name_first, delay)
         elif msg.content.startswith("!work"):
             cmd = msg.content[5:].strip()
@@ -196,7 +196,7 @@ class TherapyBot(discord.Client):
             self.state.set_user_key(user.id, UserKey.PROMPT, msg.id)
         else:
             self.state.set_user_key(user.id, UserKey.PROMPT, 0)
-        await self.play_message_snd(message, user.id, message == MsgKey.DONE_TIMER, 2 if (message == MsgKey.DONE_TIMER) else 0)
+        await self.play_message_snd(message, user.id, message == MsgKey.DONE_TIMER, 1 if (message == MsgKey.DONE_TIMER) else 0)
 
     async def user_remind_working(self, user):
         ch = self.get_channel(self.config.get(ConfKey.WORK_CHANNEL))
@@ -205,7 +205,7 @@ class TherapyBot(discord.Client):
         await msg.add_reaction('\N{CROSS MARK}')
         self.state.set_user_key(user.id, UserKey.PROMPT, msg.id)
         self.state.set_user_key(user.id, UserKey.REMIND, time.time())
-        await self.play_message_snd(MsgKey.REMIND, user.id, True, 2)
+        await self.play_message_snd(MsgKey.REMIND, user.id, True, 1)
 
     async def start_guessing_game(self, channel=None):
         if channel is None:
