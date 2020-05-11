@@ -6,6 +6,7 @@ import asyncio
 
 
 FILENAME = 'markov/{}.json'
+TXT_FILE = 'markov/{}.txt'
 
 
 class Markov:
@@ -30,6 +31,9 @@ class Markov:
         if cmd == "regenerate":
             n = await self.regenerate(msg)
             await msg.channel.send(f"finished regenerating, using {n} messages")
+        elif cmd == "regenerate keep":
+            n = await self.regenerate(msg, keep=True)
+            await msg.channel.send(f"finished regenerating, using {n} messages")
         elif cmd.startswith("imitate "):
             name = cmd[8:]
             for id_str, info in self.config.get(ConfKey.USERS):
@@ -37,22 +41,38 @@ class Markov:
                     await self.talk(msg.channel, user=int(id_str))
                     break
 
-    async def regenerate(self, orig_msg):
+    async def regenerate(self, orig_msg, keep=False):
         msgs = {'all': []}
         n = 0
         for i, channel in enumerate(self.config.get(ConfKey.MARKOV_CHANNELS)):
-            await orig_msg.channel.send(f'reading channel {i + 1}/{len(self.config.get(ConfKey.MARKOV_CHANNELS))}')
-            async for msg in self.bot.get_channel(channel).history(limit=10**5):
-                if not msg.author.bot:
-                    n += 1
-                    text = msg.content
-                    msgs['all'].append(text)
-                    if msg.author.id not in msgs:
-                        msgs[msg.author.id] = [text]
-                    else:
-                        msgs[msg.author.id].append(text)
-        for key, msg in msgs.items():
-            model = markovify.NewlineText('\n'.join(msg), retain_original=False)
+
+            if keep:
+                keys = ['all']
+                work_channel = self.config.get(ConfKey.WORK_CHANNEL)
+                for member in self.bot.get_channel(work_channel).members:
+                    if not member.bot:
+                        keys.append(member.id)
+                for key in keys:
+                    fn = TXT_FILE.format(key)
+                    if os.path.exists(fn):
+                        with open(fn, 'r') as f:
+                            msgs[key] = f.read().split('\n')
+            else:
+                await orig_msg.channel.send(f'reading channel {i + 1}/{len(self.config.get(ConfKey.MARKOV_CHANNELS))}')
+                async for msg in self.bot.get_channel(channel).history(limit=10**5):
+                    if not msg.author.bot:
+                        n += 1
+                        text = msg.content
+                        msgs['all'].append(text)
+                        if msg.author.id not in msgs:
+                            msgs[msg.author.id] = [text]
+                        else:
+                            msgs[msg.author.id].append(text)
+        for key, texts in msgs.items():
+            if not keep:
+                with open(TXT_FILE.format(key)) as f:
+                    f.write('\n'.join(texts))
+            model = markovify.NewlineText('\n'.join(texts), retain_original=False)
             self.models[key] = model.compile(inplace=True)
             with open(FILENAME.format(key), 'w') as f:
                 f.write(self.models[key].to_json())
@@ -71,4 +91,4 @@ class Markov:
                     await asyncio.sleep(0.04 * len(m))
                     await channel.send(m)
                     break
-            keep_talking = random.random < cont_chance
+            keep_talking = random.random() < cont_chance
