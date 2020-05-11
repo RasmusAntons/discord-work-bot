@@ -135,7 +135,7 @@ class TherapyBot(discord.Client):
                     await self.set_avatar(Expression.THREATENING)
         elif self.guessing_prompt == msg.id:
             if msg.author.id not in self.guesses:
-                for uid_str, info in self.config.get(ConfKey.USERS):
+                for uid_str, info in self.config.get(ConfKey.USERS).items():
                     if reaction.emoji == info['emoji']:
                         if self.guessing_target == int(uid_str):
                             self.guessing_prompt = None
@@ -196,7 +196,7 @@ class TherapyBot(discord.Client):
             await asyncio.sleep(20)
             if self.guessing_target is None:
                 break
-            await self.markov.talk(channel, self.guessing_target)
+            await self.markov.talk(channel, user=self.guessing_target, cont_chance=0)
 
     async def set_avatar(self, expression=None):
         ts = time.time()
