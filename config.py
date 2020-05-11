@@ -16,6 +16,7 @@ class ConfKey(Enum):
     MESSAGES = 'messages'
     MARKOV_CHANNELS = 'markov_channels'
     TALK_HOURS = 'talk_hours'
+    USERS = 'users'
 
 
 class MsgKey(Enum):
@@ -43,6 +44,10 @@ class Config:
 
     def get_msg(self, key: MsgKey):
         return self.conf[ConfKey.MESSAGES.value].get(key.value)
+
+    def get_emoji(self, user_id):
+        res = self.conf[ConfKey.USERS].get(str(user_id))
+        return res['emoji'] if res else None
 
     def reload(self):
         self.conf = json.load(open(self.filename))
