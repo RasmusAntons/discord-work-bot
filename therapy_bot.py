@@ -147,6 +147,7 @@ class TherapyBot(discord.Client):
                 if done:
                     await self.set_avatar(Expression.ANGRY)
                     await msg.channel.send(self.config.get_msg(MsgKey.FAILURE).format(user.mention))
+                    await self.play_message_snd(MsgKey.FAILURE, user.id, True, 3)
                     self.angered = time.time() + 7200
                 else:
                     self.state.set_user_key(user.id, UserKey.SLACKING, True)
@@ -193,7 +194,7 @@ class TherapyBot(discord.Client):
             self.state.set_user_key(user.id, UserKey.PROMPT, msg.id)
         else:
             self.state.set_user_key(user.id, UserKey.PROMPT, 0)
-        await self.play_message_snd(message, user.id)
+        await self.play_message_snd(message, user.id, message == MsgKey.DONE_TIMER, 2 if (message == MsgKey.DONE_TIMER) else 0)
 
     async def user_remind_working(self, user):
         ch = self.get_channel(self.config.get(ConfKey.WORK_CHANNEL))
@@ -202,7 +203,7 @@ class TherapyBot(discord.Client):
         await msg.add_reaction('\N{CROSS MARK}')
         self.state.set_user_key(user.id, UserKey.PROMPT, msg.id)
         self.state.set_user_key(user.id, UserKey.REMIND, time.time())
-        await self.play_message_snd(MsgKey.REMIND, user.id)
+        await self.play_message_snd(MsgKey.REMIND, user.id, True, 2)
 
     async def start_guessing_game(self, channel=None):
         if channel is None:
@@ -257,7 +258,7 @@ class TherapyBot(discord.Client):
                 self.expression = None
                 self.avatar_backoff = time.time() + 600
 
-    async def play_message_snd(self, msg: MsgKey, usr_id=None, name_first=False):
+    async def play_message_snd(self, msg: MsgKey, usr_id=None, name_first=False, delay=0):
         usr_name = self.config.get_name(usr_id)
         ch = self.get_channel(self.config.get(ConfKey.VOICE_CHANNEL))
         for member in ch.members:
@@ -274,11 +275,14 @@ class TherapyBot(discord.Client):
         if not name_first:
             self.audio_queue.put(random.choice(msg_opts))
             if usr_name is not None:
+                if delay:
+                    self.audio_queue.put(delay)
                 self.audio_queue.put(f'res/{usr_name}.wav')
         else:
             if usr_name is not None:
                 self.audio_queue.put(f'res/{usr_name}.wav')
-                self.audio_queue.put(3)
+                if delay:
+                    self.audio_queue.put(delay)
             self.audio_queue.put(random.choice(msg_opts))
         self.audio_queue.put(1)
         if init:
