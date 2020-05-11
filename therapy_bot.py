@@ -19,6 +19,9 @@ class TherapyBot(discord.Client):
         self.expression = None # todo: actual avatar
         self.avatar_backoff = 0
         self.angered = 0
+        self.guessing_prompt = None
+        self.guessing_target = None
+        self.guesses = []
 
     async def on_ready(self):
         print('I\'m in.')
@@ -56,6 +59,8 @@ class TherapyBot(discord.Client):
             await self.markov.on_command(msg, cmd)
         if self.user.mentioned_in(msg):
             await self.markov.talk(msg.channel)
+        elif msg.content == "!gg":
+            await self.start_guessing_game(msg.channel)
         elif msg.content.startswith("!work"):
             cmd = msg.content[5:].strip()
             if cmd == "awake":
@@ -128,6 +133,17 @@ class TherapyBot(discord.Client):
                 else:
                     self.state.set_user_key(user.id, UserKey.SLACKING, True)
                     await self.set_avatar(Expression.THREATENING)
+        elif self.guessing_prompt == msg.id:
+            if msg.author.id not in self.guesses:
+                for uid_str, info in self.config.get(ConfKey.USERS):
+                    if reaction.emoji == info['emoji']:
+                        if self.guessing_target == int(uid_str):
+                            self.guessing_prompt = None
+                            await msg.channel.send(f'{msg.author.mention} won the guessing game by guessing {self.get_user(self.guessing_target).display_name}')
+                        else:
+                            self.guesses.append(msg.author.id)
+                            await msg.channel.send(f'{msg.author.mention} guessed wrong')
+                        break
 
     async def user_awake(self, user, channel=None):
         ch = channel or self.get_channel(self.config.get(ConfKey.WORK_CHANNEL))
@@ -164,6 +180,23 @@ class TherapyBot(discord.Client):
         await msg.add_reaction('\N{CROSS MARK}')
         self.state.set_user_key(user.id, UserKey.PROMPT, msg.id)
         self.state.set_user_key(user.id, UserKey.REMIND, time.time())
+
+    async def start_guessing_game(self, channel=None):
+        if channel is None:
+            channel = self.get_channel(self.config.get(ConfKey.MAIN_CHANNEL))
+        users = self.config.get(ConfKey.USERS)
+        uid_str = random.choice(list(users.keys()))
+        self.guessing_target = int(uid_str)
+        self.guesses = []
+        msg = await channel.send("Starting guessing game!")
+        self.guessing_prompt = msg.id
+        for info in users.values():
+            msg.add_reaction(info['emoji'])
+        for i in range(5):
+            await asyncio.sleep(20)
+            if self.guessing_target is None:
+                break
+            await self.markov.talk(channel, self.guessing_target)
 
     async def set_avatar(self, expression=None):
         ts = time.time()

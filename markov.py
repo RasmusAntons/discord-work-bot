@@ -68,6 +68,8 @@ class Markov:
                         else:
                             msgs[msg.author.id].append(text)
         for key, texts in msgs.items():
+            if len(texts) < 20:
+                continue
             if not keep:
                 with open(TXT_FILE.format(key), 'w') as f:
                     f.write('\n'.join(texts))
