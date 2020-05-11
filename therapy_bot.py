@@ -22,6 +22,7 @@ class TherapyBot(discord.Client):
         self.guessing_prompt = None
         self.guessing_target = None
         self.guesses = []
+        self.guessing_blocked = False
 
     async def on_ready(self):
         print('I\'m in.')
@@ -60,7 +61,8 @@ class TherapyBot(discord.Client):
         if self.user.mentioned_in(msg):
             await self.markov.talk(msg.channel)
         elif msg.content == "!gg":
-            await self.start_guessing_game(msg.channel)
+            if not self.guessing_blocked:
+                await self.start_guessing_game(msg.channel)
         elif msg.content.startswith("!work"):
             cmd = msg.content[5:].strip()
             if cmd == "awake":
@@ -192,13 +194,18 @@ class TherapyBot(discord.Client):
         self.guesses = []
         msg = await channel.send("Starting guessing game!")
         self.guessing_prompt = msg.id
-        for info in users.values():
+        self.guessing_blocked = True
+        infos = users.values()
+        random.shuffle(infos)
+        for info in infos:
             await msg.add_reaction(info['emoji'])
         for i in range(5):
             await asyncio.sleep(20)
             if self.guessing_prompt is None:
                 break
             await self.markov.talk(channel, user=self.guessing_target, cont_chance=0)
+        else:
+            self.guessing_blocked = False
 
     async def set_avatar(self, expression=None):
         ts = time.time()
