@@ -138,7 +138,7 @@ class TherapyBot(discord.Client):
         elif self.guessing_prompt == msg.id:
             if user.id not in self.guesses:
                 for uid_str, info in self.config.get(ConfKey.USERS).items():
-                    if reaction.emoji == info['emoji']:
+                    if str(reaction.emoji) == info['emoji']:
                         if self.guessing_target == int(uid_str):
                             self.guessing_prompt = None
                             await msg.channel.send(f'{user.mention} won the guessing game by guessing {self.get_user(self.guessing_target).display_name}')
