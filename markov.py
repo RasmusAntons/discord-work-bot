@@ -44,20 +44,19 @@ class Markov:
     async def regenerate(self, orig_msg, keep=False):
         msgs = {'all': []}
         n = 0
-        for i, channel in enumerate(self.config.get(ConfKey.MARKOV_CHANNELS)):
-
-            if keep:
-                keys = ['all']
-                work_channel = self.config.get(ConfKey.WORK_CHANNEL)
-                for member in self.bot.get_channel(work_channel).members:
-                    if not member.bot:
-                        keys.append(member.id)
-                for key in keys:
-                    fn = TXT_FILE.format(key)
-                    if os.path.exists(fn):
-                        with open(fn, 'r') as f:
-                            msgs[key] = f.read().split('\n')
-            else:
+        if keep:
+            keys = ['all']
+            work_channel = self.config.get(ConfKey.WORK_CHANNEL)
+            for member in self.bot.get_channel(work_channel).members:
+                if not member.bot:
+                    keys.append(member.id)
+            for key in keys:
+                fn = TXT_FILE.format(key)
+                if os.path.exists(fn):
+                    with open(fn, 'r') as f:
+                        msgs[key] = f.read().split('\n')
+        else:
+            for i, channel in enumerate(self.config.get(ConfKey.MARKOV_CHANNELS)):
                 await orig_msg.channel.send(f'reading channel {i + 1}/{len(self.config.get(ConfKey.MARKOV_CHANNELS))}')
                 async for msg in self.bot.get_channel(channel).history(limit=10**5):
                     if not msg.author.bot:
@@ -70,12 +69,15 @@ class Markov:
                             msgs[msg.author.id].append(text)
         for key, texts in msgs.items():
             if not keep:
-                with open(TXT_FILE.format(key)) as f:
+                with open(TXT_FILE.format(key), 'w') as f:
                     f.write('\n'.join(texts))
-            model = markovify.NewlineText('\n'.join(texts), retain_original=False)
-            self.models[key] = model.compile(inplace=True)
-            with open(FILENAME.format(key), 'w') as f:
-                f.write(self.models[key].to_json())
+            try:
+                model = markovify.NewlineText('\n'.join(texts), retain_original=False)
+                self.models[key] = model.compile(inplace=True)
+                with open(FILENAME.format(key), 'w') as f:
+                    f.write(self.models[key].to_json())
+            except KeyError as e:
+                await orig_msg.channel.send(str(e))
         return n
 
     async def talk(self, channel, user='all', cont_chance=0.5):
