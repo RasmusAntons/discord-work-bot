@@ -195,7 +195,7 @@ class TherapyBot(discord.Client):
         msg = await channel.send("Starting guessing game!")
         self.guessing_prompt = msg.id
         self.guessing_blocked = True
-        infos = users.values()
+        infos = list(users.values())
         random.shuffle(infos)
         for info in infos:
             await msg.add_reaction(info['emoji'])
