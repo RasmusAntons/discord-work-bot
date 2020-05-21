@@ -135,7 +135,8 @@ class TherapyBot(discord.Client):
         msg = reaction.message
         prompt = self.state.get_user_key(user.id, UserKey.PROMPT)
         done = self.state.get_user_key(user.id, UserKey.DONE)
-        self.state.set_user_key(user.id, UserKey.PROMPT, 0)
+        if prompt:
+            self.state.set_user_key(user.id, UserKey.PROMPT, 0)
         if prompt == msg.id:
             if reaction.emoji == '\N{WHITE HEAVY CHECK MARK}':
                 await msg.add_reaction('<:dreamwuwu:643219778806218773>')
