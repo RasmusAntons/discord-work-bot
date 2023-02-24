@@ -90,7 +90,6 @@ class State:
             self.users.upsert(res.state, user.id == user_id)
         else:
             res.set(UserKey.LAST_ACTIVE, ts)
-            res.set(UserKey.AWAKE, ts)
             res.set(UserKey.ID, user_id)
             self.users.insert(res.state)
             awoken = True
