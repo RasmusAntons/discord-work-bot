@@ -13,7 +13,9 @@ import os
 
 class TherapyBot(discord.Client):
     def __init__(self, config: Config):
-        super().__init__()
+        intents = discord.Intents.default()
+        intents.message_content = True
+        super().__init__(intents=intents)
         self.config = config
         self.state = State(config)
         self.markov = Markov(self, config)
@@ -40,12 +42,14 @@ class TherapyBot(discord.Client):
                 work_delay = user.get(UserKey.WORK_DELAY) * 3600
                 work_duration = user.get(UserKey.WORK_DURATION) * 3600
                 reminder_interval = user.get(UserKey.REMIND_INTERVAL) * 3600
+                user_id = user.get(UserKey.ID)
+                discord_user = self.get_user(user_id) or await self.fetch_user(user_id)
                 if user.get(UserKey.AWAKE) > user.get(UserKey.WORKING) and (ts - user.get(UserKey.AWAKE)) > work_delay:
-                    await self.user_start_working(self.get_user(user.get(UserKey.ID)))
+                    await self.user_start_working(discord_user)
                 elif not user.get(UserKey.DONE) and (ts - user.get(UserKey.WORKING)) > work_duration:
-                    await self.user_stop_working(self.get_user(user.get(UserKey.ID)))
+                    await self.user_stop_working(discord_user)
                 elif not user.get(UserKey.DONE) and (ts - user.get(UserKey.REMIND)) > reminder_interval:
-                    await self.user_remind_working(self.get_user(user.get(UserKey.ID)))
+                    await self.user_remind_working(discord_user)
             ts = time.time()
             if ts - self.prev_talk > 360 and datetime.now().hour in self.config.get(ConfKey.TALK_HOURS) and datetime.now().minute < 5:
                 await self.markov.talk(self.get_channel(self.config.get(ConfKey.MAIN_CHANNEL)))
@@ -162,7 +166,8 @@ class TherapyBot(discord.Client):
                         if self.guessing_target == int(uid_str):
                             self.guessing_prompt = None
                             self.guessing_blocked = False
-                            await msg.channel.send(f'{user.mention} won the guessing game by guessing {self.get_user(self.guessing_target).display_name}')
+                            discord_user = self.get_user(self.guessing_target) or await self.fetch_user(self.guessing_target)
+                            await msg.channel.send(f'{user.mention} won the guessing game by guessing {discord_user.display_name}')
                         else:
                             self.guesses.append(user.id)
                             await msg.channel.send(f'{user.mention} guessed wrong')

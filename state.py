@@ -77,9 +77,10 @@ class State:
     def update_last_active(self, user_id):
         awoken = False
         user = Query()
-        res = UserState(self.users.get(user.id == user_id))
+        user_info = self.users.get(user.id == user_id)
+        res = UserState(user_info)
         ts = time.time()
-        if res:
+        if user_info:
             awake_cooldown = res.get(UserKey.AWAKE_COOLDOWN, self.config.get(ConfKey.AWAKE_COOLDOWN)) * 3600
             sleep_min = res.get(UserKey.SLEEP_MIN, self.config.get(ConfKey.SLEEP_MIN)) * 3600
             if (ts - res.get(UserKey.AWAKE)) > awake_cooldown and (ts - res.get(UserKey.LAST_ACTIVE)) > sleep_min:
@@ -89,6 +90,8 @@ class State:
             self.users.upsert(res.state, user.id == user_id)
         else:
             res.set(UserKey.LAST_ACTIVE, ts)
+            res.set(UserKey.AWAKE, ts)
             res.set(UserKey.ID, user_id)
             self.users.insert(res.state)
+            awoken = True
         return awoken

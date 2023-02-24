@@ -5,8 +5,7 @@ from therapy_bot import TherapyBot
 
 def run_bot(config):
     disc = TherapyBot(config)
-    disc.loop.run_until_complete(disc.login(config.get(ConfKey.DISCORD_TOKEN)))
-    disc.loop.run_until_complete(disc.connect())
+    disc.run(config.get(ConfKey.DISCORD_TOKEN))
 
 
 if __name__ == '__main__':
